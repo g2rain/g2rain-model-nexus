@@ -1,0 +1,367 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.g2rain.model.nexus.dao.ModelUsageRecordDao">
+    <!-- 通用结果集映射（包含所有字段：主键+基础字段+业务字段） -->
+    <resultMap id="BaseResultMap" type="com.g2rain.model.nexus.dao.po.ModelUsageRecordPo">
+        <!-- 主键字段 -->
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <!-- 基础字段（createTime、updateTime） -->
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+        <!-- 业务字段（其他自定义字段） -->
+        <result column="organ_id" property="organId" jdbcType="BIGINT"/>
+        <result column="profile_id" property="profileId" jdbcType="BIGINT"/>
+        <result column="catalog_id" property="catalogId" jdbcType="BIGINT"/>
+        <result column="protocol" property="protocol" jdbcType="VARCHAR"/>
+        <result column="provider" property="provider" jdbcType="VARCHAR"/>
+        <result column="model_name" property="modelName" jdbcType="VARCHAR"/>
+        <result column="prompt_tokens" property="promptTokens" jdbcType="INTEGER"/>
+        <result column="completion_tokens" property="completionTokens" jdbcType="INTEGER"/>
+        <result column="total_tokens" property="totalTokens" jdbcType="INTEGER"/>
+        <!-- version字段（如果存在） -->
+        <result column="version" property="version" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <!-- 定义可复用排序方向片段 -->
+    <sql id="directionClause">
+        <choose>
+            <when test="item.direction == 'DESC'">DESC</when>
+            <otherwise>ASC</otherwise>
+        </choose>
+    </sql>
+
+    <!-- 可复用的动态排序 SQL 片段 -->
+    <sql id="dynamicOrderBy">
+        <trim prefix="ORDER BY" suffixOverrides=",">
+            <foreach collection="safeSorts" item="item" separator=",">
+                <choose>
+                    <when test="item.column == 'id'">
+                        id
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'createTime'">
+                        create_time
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'updateTime'">
+                        update_time
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'organId'">
+                        organ_id
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'profileId'">
+                        profile_id
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'catalogId'">
+                        catalog_id
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'protocol'">
+                        protocol
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'provider'">
+                        provider
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'modelName'">
+                        model_name
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'promptTokens'">
+                        prompt_tokens
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'completionTokens'">
+                        completion_tokens
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'totalTokens'">
+                        total_tokens
+                        <include refid="directionClause"/>
+                    </when>
+                </choose>
+            </foreach>
+        </trim>
+    </sql>
+
+    <!-- insert / insertWithoutIsolation 共用 -->
+    <sql id="insertBody">
+        INSERT INTO model_usage_record (
+        <!-- 主键字段（自增主键不包含在插入语句中） -->
+        id,
+        <!-- 基础字段 -->
+        create_time, update_time,
+        <!-- 业务字段 -->
+        organ_id, profile_id, catalog_id, protocol, provider, model_name, prompt_tokens, completion_tokens, total_tokens,
+        <!-- version字段（如果存在） -->
+        version
+        ) VALUES (
+        <!-- 主键值（自增主键不包含） -->
+        #{id, jdbcType=BIGINT},
+        <!-- 基础字段值 -->
+        #{createTime, jdbcType=TIMESTAMP}, #{updateTime, jdbcType=TIMESTAMP},
+        <!-- 业务字段值 -->
+        #{organId, jdbcType=BIGINT}, #{profileId, jdbcType=BIGINT}, #{catalogId, jdbcType=BIGINT}, #{protocol, jdbcType=VARCHAR}, #{provider, jdbcType=VARCHAR}, #{modelName, jdbcType=VARCHAR}, #{promptTokens, jdbcType=INTEGER}, #{completionTokens, jdbcType=INTEGER}, #{totalTokens, jdbcType=INTEGER},
+        <!-- version字段值（如果存在，设置默认值为0） -->
+        0
+        )
+    </sql>
+
+    <!-- update / updateWithoutIsolation 共用 -->
+    <sql id="updateBody">
+        UPDATE model_usage_record
+        <set>
+            <!-- 基础字段更新（排除version，version单独处理） -->
+            <if test="updateTime != null">
+                update_time = #{updateTime, jdbcType=TIMESTAMP},
+            </if>
+            <!-- 业务字段更新 -->
+            <if test="organId != null">
+                organ_id = #{organId, jdbcType=BIGINT},
+            </if>
+            <if test="profileId != null">
+                profile_id = #{profileId, jdbcType=BIGINT},
+            </if>
+            <if test="catalogId != null">
+                catalog_id = #{catalogId, jdbcType=BIGINT},
+            </if>
+            <if test="protocol != null">
+                protocol = #{protocol, jdbcType=VARCHAR},
+            </if>
+            <if test="provider != null">
+                provider = #{provider, jdbcType=VARCHAR},
+            </if>
+            <if test="modelName != null">
+                model_name = #{modelName, jdbcType=VARCHAR},
+            </if>
+            <if test="promptTokens != null">
+                prompt_tokens = #{promptTokens, jdbcType=INTEGER},
+            </if>
+            <if test="completionTokens != null">
+                completion_tokens = #{completionTokens, jdbcType=INTEGER},
+            </if>
+            <if test="totalTokens != null">
+                total_tokens = #{totalTokens, jdbcType=INTEGER},
+            </if>
+            <!-- version字段更新（如果存在，版本号自增） -->
+            version = version + 1
+        </set>
+        WHERE id = #{id, jdbcType=BIGINT}
+    </sql>
+
+    <!-- selectById / selectByIdWithoutIsolation 共用 -->
+    <sql id="selectByIdBody">
+        SELECT
+        <!-- 主键字段 -->
+        id,
+        <!-- 基础字段 -->
+        create_time, update_time,
+        <!-- 业务字段 -->
+        organ_id, profile_id, catalog_id, protocol, provider, model_name, prompt_tokens, completion_tokens, total_tokens,
+        <!-- version字段（如果存在） -->
+        version
+        FROM model_usage_record
+        WHERE id = #{id, jdbcType=BIGINT}
+    </sql>
+
+    <!-- selectList / selectListWithoutIsolation 共用 -->
+    <sql id="selectListBody">
+        SELECT
+        <!-- 主键字段 -->
+        id,
+        <!-- 基础字段 -->
+        create_time, update_time,
+        <!-- 业务字段 -->
+        organ_id, profile_id, catalog_id, protocol, provider, model_name, prompt_tokens, completion_tokens, total_tokens,
+        <!-- version字段（如果存在） -->
+        version
+        FROM model_usage_record
+        <where>
+            <!-- 主键筛选 -->
+            <if test="id != null">
+                AND id = #{id, jdbcType=BIGINT}
+            </if>
+            <if test="ids != null and ids.size() > 0">
+                AND id IN
+                <foreach collection="ids" item="item" open="(" separator="," close=")">
+                    #{item, jdbcType=BIGINT}
+                </foreach>
+            </if>
+            <!-- 基础字段筛选（createTime和updateTime时间筛选） -->
+            <if test="createTime != null">
+                <if test="createTime[0] != '' and (createTime.size() lt 2 or createTime[1] == '')">
+                    AND create_time >= #{createTime[0], jdbcType=TIMESTAMP}
+                </if>
+                <if test="createTime.size() >= 2 and createTime[0] == '' and createTime[1] != ''">
+                    AND create_time &lt;= #{createTime[1], jdbcType=TIMESTAMP}
+                </if>
+                <if test="createTime.size() >= 2 and createTime[0] != '' and createTime[1] != ''">
+                    AND create_time BETWEEN #{createTime[0], jdbcType=TIMESTAMP}
+                    AND #{createTime[1], jdbcType=TIMESTAMP}
+                </if>
+            </if>
+            <if test="updateTime != null">
+                <if test="updateTime[0] != '' and (updateTime.size() lt 2 or updateTime[1] == '')">
+                    AND update_time >= #{updateTime[0], jdbcType=TIMESTAMP}
+                </if>
+                <if test="updateTime.size() >= 2 and updateTime[0] == '' and updateTime[1] != ''">
+                    AND update_time &lt;= #{updateTime[1], jdbcType=TIMESTAMP}
+                </if>
+                <if test="updateTime.size() >= 2 and updateTime[0] != '' and updateTime[1] != ''">
+                    AND update_time BETWEEN #{updateTime[0], jdbcType=TIMESTAMP}
+                    AND #{updateTime[1], jdbcType=TIMESTAMP}
+                </if>
+            </if>
+            <!-- 业务字段筛选 -->
+            <if test="organId != null">
+                AND organ_id = #{organId, jdbcType=BIGINT}
+            </if>
+            <if test="profileId != null">
+                AND profile_id = #{profileId, jdbcType=BIGINT}
+            </if>
+            <if test="catalogId != null">
+                AND catalog_id = #{catalogId, jdbcType=BIGINT}
+            </if>
+            <if test="protocol != null">
+                AND protocol = #{protocol, jdbcType=VARCHAR}
+            </if>
+            <if test="provider != null">
+                AND provider = #{provider, jdbcType=VARCHAR}
+            </if>
+            <if test="modelName != null">
+                AND model_name = #{modelName, jdbcType=VARCHAR}
+            </if>
+            <if test="promptTokens != null">
+                AND prompt_tokens = #{promptTokens, jdbcType=INTEGER}
+            </if>
+            <if test="completionTokens != null">
+                AND completion_tokens = #{completionTokens, jdbcType=INTEGER}
+            </if>
+            <if test="totalTokens != null">
+                AND total_tokens = #{totalTokens, jdbcType=INTEGER}
+            </if>
+        </where>
+        <include refid="dynamicOrderBy"/>
+    </sql>
+
+    <!-- 插入单条记录 -->
+    <insert id="insert" parameterType="com.g2rain.model.nexus.dao.po.ModelUsageRecordPo">
+        <include refid="insertBody"/>
+    </insert>
+
+    <!-- 批量插入记录 -->
+    <insert id="insertMultiple" parameterType="java.util.List">
+        INSERT INTO model_usage_record (
+        <!-- 主键字段（自增主键不包含） -->
+        id,
+        <!-- 基础字段 -->
+        create_time, update_time,
+        <!-- 业务字段 -->
+        organ_id, profile_id, catalog_id, protocol, provider, model_name, prompt_tokens, completion_tokens, total_tokens,
+        <!-- version字段（如果存在） -->
+        version
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            <!-- 主键值（自增主键不包含） -->
+            #{item.id, jdbcType=BIGINT},
+            <!-- 基础字段值 -->
+            #{item.createTime, jdbcType=TIMESTAMP}, #{item.updateTime, jdbcType=TIMESTAMP},
+            <!-- 业务字段值 -->
+            #{item.organId, jdbcType=BIGINT}, #{item.profileId, jdbcType=BIGINT}, #{item.catalogId, jdbcType=BIGINT}, #{item.protocol, jdbcType=VARCHAR}, #{item.provider, jdbcType=VARCHAR}, #{item.modelName, jdbcType=VARCHAR}, #{item.promptTokens, jdbcType=INTEGER}, #{item.completionTokens, jdbcType=INTEGER}, #{item.totalTokens, jdbcType=INTEGER},
+            <!-- version字段值（如果存在，设置默认值为0） -->
+            0
+            )
+        </foreach>
+    </insert>
+
+    <!-- 根据 ID 更新记录（包含基础字段和业务字段） -->
+    <update id="update" parameterType="com.g2rain.model.nexus.dao.po.ModelUsageRecordPo">
+        <include refid="updateBody"/>
+    </update>
+
+    <!-- 根据 ID 和 Version 更新记录（乐观锁更新，包含基础字段和业务字段） -->
+    <update id="updateByVersion" parameterType="com.g2rain.model.nexus.dao.po.ModelUsageRecordPo">
+        UPDATE model_usage_record
+        <set>
+            <!-- 基础字段更新（排除version，version单独处理） -->
+            <if test="updateTime != null">
+                update_time = #{updateTime, jdbcType=TIMESTAMP},
+            </if>
+            <!-- 业务字段更新 -->
+            <if test="organId != null">
+                organ_id = #{organId, jdbcType=BIGINT},
+            </if>
+            <if test="profileId != null">
+                profile_id = #{profileId, jdbcType=BIGINT},
+            </if>
+            <if test="catalogId != null">
+                catalog_id = #{catalogId, jdbcType=BIGINT},
+            </if>
+            <if test="protocol != null">
+                protocol = #{protocol, jdbcType=VARCHAR},
+            </if>
+            <if test="provider != null">
+                provider = #{provider, jdbcType=VARCHAR},
+            </if>
+            <if test="modelName != null">
+                model_name = #{modelName, jdbcType=VARCHAR},
+            </if>
+            <if test="promptTokens != null">
+                prompt_tokens = #{promptTokens, jdbcType=INTEGER},
+            </if>
+            <if test="completionTokens != null">
+                completion_tokens = #{completionTokens, jdbcType=INTEGER},
+            </if>
+            <if test="totalTokens != null">
+                total_tokens = #{totalTokens, jdbcType=INTEGER},
+            </if>
+            <!-- version字段更新（乐观锁版本号自增） -->
+            version = version + 1
+        </set>
+        WHERE id = #{id, jdbcType=BIGINT}
+        AND version = #{version, jdbcType=INTEGER}
+    </update>
+
+    <!-- 根据 ID 删除记录（物理删除记录） -->
+    <delete id="delete" parameterType="Long">
+        DELETE FROM model_usage_record
+        WHERE id = #{id, jdbcType=BIGINT}
+    </delete>
+
+    <!-- 根据 ID 查询记录（查询所有字段） -->
+    <select id="selectById" parameterType="Long" resultMap="BaseResultMap">
+        <include refid="selectByIdBody"/>
+    </select>
+
+    <!-- 根据 SelectDto 条件查询列表 -->
+    <select id="selectList" parameterType="com.g2rain.model.nexus.dto.ModelUsageRecordSelectDto" resultMap="BaseResultMap">
+        <include refid="selectListBody"/>
+    </select>
+
+    <!-- 插入单条记录（忽略数据隔离） -->
+    <insert id="insertWithoutIsolation" parameterType="com.g2rain.model.nexus.dao.po.ModelUsageRecordPo">
+        <include refid="insertBody"/>
+    </insert>
+
+    <!-- 根据 ID 更新记录（忽略数据隔离） -->
+    <update id="updateWithoutIsolation" parameterType="com.g2rain.model.nexus.dao.po.ModelUsageRecordPo">
+        <include refid="updateBody"/>
+    </update>
+
+    <!-- 根据 ID 查询记录（忽略数据隔离） -->
+    <select id="selectByIdWithoutIsolation" parameterType="Long" resultMap="BaseResultMap">
+        <include refid="selectByIdBody"/>
+    </select>
+
+    <!-- 根据 SelectDto 条件查询列表（忽略数据隔离） -->
+    <select id="selectListWithoutIsolation" parameterType="com.g2rain.model.nexus.dto.ModelUsageRecordSelectDto" resultMap="BaseResultMap">
+        <include refid="selectListBody"/>
+    </select>
+</mapper>

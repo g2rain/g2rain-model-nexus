@@ -1,0 +1,477 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+    "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.g2rain.model.nexus.dao.ModelServiceProfileDao">
+    <!-- 通用结果集映射（包含所有字段：主键+基础字段+业务字段） -->
+    <resultMap id="BaseResultMap" type="com.g2rain.model.nexus.dao.po.ModelServiceProfilePo">
+        <!-- 主键字段 -->
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <!-- 基础字段（createTime、updateTime） -->
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+        <!-- 业务字段（其他自定义字段） -->
+        <result column="organ_id" property="organId" jdbcType="BIGINT"/>
+        <result column="catalog_id" property="catalogId" jdbcType="BIGINT"/>
+        <result column="temperature" property="temperature" jdbcType="DECIMAL"/>
+        <result column="top_p" property="topP" jdbcType="DECIMAL"/>
+        <result column="max_tokens" property="maxTokens" jdbcType="INTEGER"/>
+        <result column="timeout_ms" property="timeoutMs" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <!-- deleteFlag字段（如果存在） -->
+        <result column="delete_flag" property="deleteFlag" jdbcType="TINYINT"/>
+        <!-- version字段（如果存在） -->
+        <result column="version" property="version" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <!-- 明细结果集映射（profile INNER JOIN catalog） -->
+    <resultMap id="DetailResultMap" type="com.g2rain.model.nexus.dao.po.ModelServiceDetailPo">
+        <!-- 主键字段（取自 profile） -->
+        <id column="id" property="id" jdbcType="BIGINT"/>
+        <!-- 基础字段（createTime、updateTime，取自 profile） -->
+        <result column="create_time" property="createTime" jdbcType="TIMESTAMP"/>
+        <result column="update_time" property="updateTime" jdbcType="TIMESTAMP"/>
+        <!-- profile 业务字段 -->
+        <result column="organ_id" property="organId" jdbcType="BIGINT"/>
+        <result column="catalog_id" property="catalogId" jdbcType="BIGINT"/>
+        <result column="temperature" property="temperature" jdbcType="DECIMAL"/>
+        <result column="top_p" property="topP" jdbcType="DECIMAL"/>
+        <result column="max_tokens" property="maxTokens" jdbcType="INTEGER"/>
+        <result column="timeout_ms" property="timeoutMs" jdbcType="INTEGER"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <!-- catalog 业务字段 -->
+        <result column="model_name" property="modelName" jdbcType="VARCHAR"/>
+        <result column="model_type" property="modelType" jdbcType="VARCHAR"/>
+        <result column="resource_type" property="resourceType" jdbcType="VARCHAR"/>
+        <result column="provider" property="provider" jdbcType="VARCHAR"/>
+        <result column="protocol" property="protocol" jdbcType="VARCHAR"/>
+        <result column="base_url" property="baseUrl" jdbcType="VARCHAR"/>
+        <result column="api_key" property="apiKey" jdbcType="VARCHAR"/>
+        <!-- deleteFlag字段（如果存在，取自 profile） -->
+        <result column="delete_flag" property="deleteFlag" jdbcType="TINYINT"/>
+        <!-- version字段（如果存在，取自 profile） -->
+        <result column="version" property="version" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <!-- 定义可复用排序方向片段 -->
+    <sql id="directionClause">
+        <choose>
+            <when test="item.direction == 'DESC'">DESC</when>
+            <otherwise>ASC</otherwise>
+        </choose>
+    </sql>
+
+    <!-- 可复用的动态排序 SQL 片段（JOIN 查询统一按 profile 别名 p 排序） -->
+    <sql id="dynamicOrderBy">
+        <trim prefix="ORDER BY" suffixOverrides=",">
+            <foreach collection="safeSorts" item="item" separator=",">
+                <choose>
+                    <when test="item.column == 'id'">
+                        p.id
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'createTime'">
+                        p.create_time
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'updateTime'">
+                        p.update_time
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'organId'">
+                        p.organ_id
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'catalogId'">
+                        p.catalog_id
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'modelName'">
+                        c.model_name
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'modelType'">
+                        c.model_type
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'resourceType'">
+                        c.resource_type
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'provider'">
+                        c.provider
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'protocol'">
+                        c.protocol
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'baseUrl'">
+                        c.base_url
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'apiKey'">
+                        c.api_key
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'temperature'">
+                        p.temperature
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'topP'">
+                        p.top_p
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'maxTokens'">
+                        p.max_tokens
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'timeoutMs'">
+                        p.timeout_ms
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'status'">
+                        p.status
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'catalogStatus'">
+                        c.status
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'description'">
+                        p.description
+                        <include refid="directionClause"/>
+                    </when>
+                    <when test="item.column == 'catalogDescription'">
+                        c.description
+                        <include refid="directionClause"/>
+                    </when>
+                </choose>
+            </foreach>
+        </trim>
+    </sql>
+
+    <!-- insert / insertWithoutIsolation 共用 -->
+    <sql id="insertBody">
+        INSERT INTO model_service_profile (
+        <!-- 主键字段（自增主键不包含在插入语句中） -->
+        id,
+        <!-- 基础字段 -->
+        create_time, update_time,
+        <!-- 业务字段 -->
+        organ_id, catalog_id, temperature, top_p, max_tokens, timeout_ms, status, description,
+        <!-- deleteFlag字段（如果存在） -->
+        delete_flag,
+        <!-- version字段（如果存在） -->
+        version
+        ) VALUES (
+        <!-- 主键值（自增主键不包含） -->
+        #{id, jdbcType=BIGINT},
+        <!-- 基础字段值 -->
+        #{createTime, jdbcType=TIMESTAMP}, #{updateTime, jdbcType=TIMESTAMP},
+        <!-- 业务字段值 -->
+        #{organId, jdbcType=BIGINT}, #{catalogId, jdbcType=BIGINT}, #{temperature, jdbcType=DECIMAL}, #{topP, jdbcType=DECIMAL}, #{maxTokens, jdbcType=INTEGER}, #{timeoutMs, jdbcType=INTEGER}, #{status, jdbcType=VARCHAR}, #{description, jdbcType=VARCHAR},
+        <!-- deleteFlag字段值（如果存在，设置默认值为0） -->
+        0,
+        <!-- version字段值（如果存在，设置默认值为0） -->
+        0
+        )
+    </sql>
+
+    <!-- update / updateWithoutIsolation 共用 -->
+    <sql id="updateBody">
+        UPDATE model_service_profile
+        <set>
+            <!-- 基础字段更新（排除version，version单独处理） -->
+            <if test="updateTime != null">
+                update_time = #{updateTime, jdbcType=TIMESTAMP},
+            </if>
+            <!-- 业务字段更新 -->
+            <if test="organId != null">
+                organ_id = #{organId, jdbcType=BIGINT},
+            </if>
+            <if test="catalogId != null">
+                catalog_id = #{catalogId, jdbcType=BIGINT},
+            </if>
+            <if test="temperature != null">
+                temperature = #{temperature, jdbcType=DECIMAL},
+            </if>
+            <if test="topP != null">
+                top_p = #{topP, jdbcType=DECIMAL},
+            </if>
+            <if test="maxTokens != null">
+                max_tokens = #{maxTokens, jdbcType=INTEGER},
+            </if>
+            <if test="timeoutMs != null">
+                timeout_ms = #{timeoutMs, jdbcType=INTEGER},
+            </if>
+            <if test="status != null">
+                status = #{status, jdbcType=VARCHAR},
+            </if>
+            <if test="description != null">
+                description = #{description, jdbcType=VARCHAR},
+            </if>
+            <!-- version字段更新（如果存在，版本号自增） -->
+            version = version + 1
+        </set>
+        WHERE id = #{id, jdbcType=BIGINT}
+    </sql>
+
+    <!-- selectById / selectByIdWithoutIsolation 共用 -->
+    <sql id="selectByIdBody">
+        SELECT
+        <!-- 主键字段（取自 profile） -->
+        p.id,
+        <!-- 基础字段（取自 profile） -->
+        p.create_time, p.update_time,
+        <!-- profile 业务字段 -->
+        p.organ_id, p.catalog_id, p.temperature, p.top_p, p.max_tokens, p.timeout_ms, p.status, p.description,
+        <!-- catalog 业务字段 -->
+        c.model_name, c.model_type, c.resource_type, c.provider, c.protocol, c.base_url, c.api_key,
+        <!-- deleteFlag字段（如果存在，取自 profile） -->
+        p.delete_flag,
+        <!-- version字段（如果存在，取自 profile） -->
+        p.version
+        FROM model_service_profile p
+        INNER JOIN model_service_catalog c ON c.id = p.catalog_id
+        AND (c.delete_flag = 0 OR c.delete_flag IS NULL)
+        WHERE p.id = #{id, jdbcType=BIGINT}
+        <!-- 过滤已删除的记录 -->
+        AND (p.delete_flag = 0 OR p.delete_flag IS NULL)
+    </sql>
+
+    <!-- selectList / selectListWithoutIsolation 共用 -->
+    <sql id="selectListBody">
+        SELECT
+        <!-- 主键字段（取自 profile） -->
+        p.id,
+        <!-- 基础字段（取自 profile） -->
+        p.create_time, p.update_time,
+        <!-- profile 业务字段 -->
+        p.organ_id, p.catalog_id, p.temperature, p.top_p, p.max_tokens, p.timeout_ms, p.status, p.description,
+        <!-- catalog 业务字段 -->
+        c.model_name, c.model_type, c.resource_type, c.provider, c.protocol, c.base_url, c.api_key,
+        <!-- deleteFlag字段（如果存在，取自 profile） -->
+        p.delete_flag,
+        <!-- version字段（如果存在，取自 profile） -->
+        p.version
+        FROM model_service_profile p
+        INNER JOIN model_service_catalog c ON c.id = p.catalog_id
+        AND (c.delete_flag = 0 OR c.delete_flag IS NULL)
+        <where>
+            <!-- 主键筛选 -->
+            <if test="id != null">
+                AND p.id = #{id, jdbcType=BIGINT}
+            </if>
+            <if test="ids != null and ids.size() > 0">
+                AND p.id IN
+                <foreach collection="ids" item="item" open="(" separator="," close=")">
+                    #{item, jdbcType=BIGINT}
+                </foreach>
+            </if>
+            <!-- 基础字段筛选（createTime和updateTime时间筛选） -->
+            <if test="createTime != null">
+                <if test="createTime[0] != '' and (createTime.size() lt 2 or createTime[1] == '')">
+                    AND p.create_time >= #{createTime[0], jdbcType=TIMESTAMP}
+                </if>
+                <if test="createTime.size() >= 2 and createTime[0] == '' and createTime[1] != ''">
+                    AND p.create_time &lt;= #{createTime[1], jdbcType=TIMESTAMP}
+                </if>
+                <if test="createTime.size() >= 2 and createTime[0] != '' and createTime[1] != ''">
+                    AND p.create_time BETWEEN #{createTime[0], jdbcType=TIMESTAMP}
+                    AND #{createTime[1], jdbcType=TIMESTAMP}
+                </if>
+            </if>
+            <if test="updateTime != null">
+                <if test="updateTime[0] != '' and (updateTime.size() lt 2 or updateTime[1] == '')">
+                    AND p.update_time >= #{updateTime[0], jdbcType=TIMESTAMP}
+                </if>
+                <if test="updateTime.size() >= 2 and updateTime[0] == '' and updateTime[1] != ''">
+                    AND p.update_time &lt;= #{updateTime[1], jdbcType=TIMESTAMP}
+                </if>
+                <if test="updateTime.size() >= 2 and updateTime[0] != '' and updateTime[1] != ''">
+                    AND p.update_time BETWEEN #{updateTime[0], jdbcType=TIMESTAMP}
+                    AND #{updateTime[1], jdbcType=TIMESTAMP}
+                </if>
+            </if>
+            <!-- 业务字段筛选 -->
+            <if test="organId != null">
+                AND p.organ_id = #{organId, jdbcType=BIGINT}
+            </if>
+            <if test="catalogId != null">
+                AND p.catalog_id = #{catalogId, jdbcType=BIGINT}
+            </if>
+            <if test="modelName != null">
+                AND c.model_name = #{modelName, jdbcType=VARCHAR}
+            </if>
+            <if test="modelType != null">
+                AND c.model_type = #{modelType, jdbcType=VARCHAR}
+            </if>
+            <if test="resourceType != null">
+                AND c.resource_type = #{resourceType, jdbcType=VARCHAR}
+            </if>
+            <if test="provider != null">
+                AND c.provider = #{provider, jdbcType=VARCHAR}
+            </if>
+            <if test="protocol != null">
+                AND c.protocol = #{protocol, jdbcType=VARCHAR}
+            </if>
+            <if test="baseUrl != null">
+                AND c.base_url = #{baseUrl, jdbcType=VARCHAR}
+            </if>
+            <if test="apiKey != null">
+                AND c.api_key = #{apiKey, jdbcType=VARCHAR}
+            </if>
+            <if test="temperature != null">
+                AND p.temperature = #{temperature, jdbcType=DECIMAL}
+            </if>
+            <if test="topP != null">
+                AND p.top_p = #{topP, jdbcType=DECIMAL}
+            </if>
+            <if test="maxTokens != null">
+                AND p.max_tokens = #{maxTokens, jdbcType=INTEGER}
+            </if>
+            <if test="timeoutMs != null">
+                AND p.timeout_ms = #{timeoutMs, jdbcType=INTEGER}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status, jdbcType=VARCHAR}
+            </if>
+            <if test="catalogStatus != null">
+                AND c.status = #{catalogStatus, jdbcType=VARCHAR}
+            </if>
+            <if test="description != null">
+                AND p.description = #{description, jdbcType=VARCHAR}
+            </if>
+            <if test="catalogDescription != null">
+                AND c.description = #{catalogDescription, jdbcType=VARCHAR}
+            </if>
+            <!-- 过滤已删除的记录 -->
+            AND (p.delete_flag = 0 OR p.delete_flag IS NULL)
+        </where>
+        <include refid="dynamicOrderBy"/>
+    </sql>
+
+    <!-- 插入单条记录 -->
+    <insert id="insert" parameterType="com.g2rain.model.nexus.dao.po.ModelServiceProfilePo">
+        <include refid="insertBody"/>
+    </insert>
+
+    <!-- 批量插入记录 -->
+    <insert id="insertMultiple" parameterType="java.util.List">
+        INSERT INTO model_service_profile (
+        <!-- 主键字段（自增主键不包含） -->
+        id,
+        <!-- 基础字段 -->
+        create_time, update_time,
+        <!-- 业务字段 -->
+        organ_id, catalog_id, temperature, top_p, max_tokens, timeout_ms, status, description,
+        <!-- deleteFlag字段（如果存在） -->
+        delete_flag,
+        <!-- version字段（如果存在） -->
+        version
+        ) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (
+            <!-- 主键值（自增主键不包含） -->
+            #{item.id, jdbcType=BIGINT},
+            <!-- 基础字段值 -->
+            #{item.createTime, jdbcType=TIMESTAMP}, #{item.updateTime, jdbcType=TIMESTAMP},
+            <!-- 业务字段值 -->
+            #{item.organId, jdbcType=BIGINT}, #{item.catalogId, jdbcType=BIGINT}, #{item.temperature, jdbcType=DECIMAL}, #{item.topP, jdbcType=DECIMAL}, #{item.maxTokens, jdbcType=INTEGER}, #{item.timeoutMs, jdbcType=INTEGER}, #{item.status, jdbcType=VARCHAR}, #{item.description, jdbcType=VARCHAR},
+            <!-- deleteFlag字段值（如果存在，设置默认值为0） -->
+            0,
+            <!-- version字段值（如果存在，设置默认值为0） -->
+            0
+            )
+        </foreach>
+    </insert>
+
+    <!-- 根据 ID 更新记录（包含基础字段和业务字段） -->
+    <update id="update" parameterType="com.g2rain.model.nexus.dao.po.ModelServiceProfilePo">
+        <include refid="updateBody"/>
+    </update>
+
+    <!-- 根据 ID 和 Version 更新记录（乐观锁更新，包含基础字段和业务字段） -->
+    <update id="updateByVersion" parameterType="com.g2rain.model.nexus.dao.po.ModelServiceProfilePo">
+        UPDATE model_service_profile
+        <set>
+            <!-- 基础字段更新（排除version，version单独处理） -->
+            <if test="updateTime != null">
+                update_time = #{updateTime, jdbcType=TIMESTAMP},
+            </if>
+            <!-- 业务字段更新 -->
+            <if test="organId != null">
+                organ_id = #{organId, jdbcType=BIGINT},
+            </if>
+            <if test="catalogId != null">
+                catalog_id = #{catalogId, jdbcType=BIGINT},
+            </if>
+            <if test="temperature != null">
+                temperature = #{temperature, jdbcType=DECIMAL},
+            </if>
+            <if test="topP != null">
+                top_p = #{topP, jdbcType=DECIMAL},
+            </if>
+            <if test="maxTokens != null">
+                max_tokens = #{maxTokens, jdbcType=INTEGER},
+            </if>
+            <if test="timeoutMs != null">
+                timeout_ms = #{timeoutMs, jdbcType=INTEGER},
+            </if>
+            <if test="status != null">
+                status = #{status, jdbcType=VARCHAR},
+            </if>
+            <if test="description != null">
+                description = #{description, jdbcType=VARCHAR},
+            </if>
+            <!-- version字段更新（乐观锁版本号自增） -->
+            version = version + 1
+        </set>
+        WHERE id = #{id, jdbcType=BIGINT}
+        AND version = #{version, jdbcType=INTEGER}
+    </update>
+
+    <!-- 根据 ID 删除记录（逻辑删除：将delete_flag设置为true） -->
+    <update id="delete" parameterType="Long">
+        UPDATE model_service_profile
+        <set>
+            delete_flag = 1, version = version + 1
+        </set>
+        WHERE id = #{id, jdbcType=BIGINT}
+        <!-- 只删除未删除的记录 -->
+        AND (delete_flag = 0 OR delete_flag IS NULL)
+    </update>
+
+    <!-- 根据 ID 查询记录（查询所有字段） -->
+    <select id="selectById" parameterType="Long" resultMap="DetailResultMap">
+        <include refid="selectByIdBody"/>
+    </select>
+
+    <!-- 根据 SelectDto 条件查询列表 -->
+    <select id="selectList" parameterType="com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto" resultMap="DetailResultMap">
+        <include refid="selectListBody"/>
+    </select>
+
+    <!-- 插入单条记录（忽略数据隔离） -->
+    <insert id="insertWithoutIsolation" parameterType="com.g2rain.model.nexus.dao.po.ModelServiceProfilePo">
+        <include refid="insertBody"/>
+    </insert>
+
+    <!-- 根据 ID 更新记录（忽略数据隔离） -->
+    <update id="updateWithoutIsolation" parameterType="com.g2rain.model.nexus.dao.po.ModelServiceProfilePo">
+        <include refid="updateBody"/>
+    </update>
+
+    <!-- 根据 ID 查询记录（忽略数据隔离） -->
+    <select id="selectByIdWithoutIsolation" parameterType="Long" resultMap="DetailResultMap">
+        <include refid="selectByIdBody"/>
+    </select>
+
+    <!-- 根据 SelectDto 条件查询列表（忽略数据隔离） -->
+    <select id="selectListWithoutIsolation" parameterType="com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto" resultMap="DetailResultMap">
+        <include refid="selectListBody"/>
+    </select>
+</mapper>

@@ -1,0 +1,54 @@
+package com.g2rain.model.nexus.enums;
+
+import com.g2rain.common.exception.ErrorCode;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+/**
+ * 模型网关业务错误码。
+ * <p>
+ * 实现平台 {@link ErrorCode}，用于协议不支持、Embedding 未接入、
+ * 工具不可在网关执行等场景的明确失败语义。
+ *
+ * @author alpha
+ * @since 2026/7/20
+ */
+@Schema(description = "模型网关错误码")
+public enum NexusErrorCode implements ErrorCode {
+
+    @Schema(description = "模型配置未启用")
+    MODEL_INACTIVE("model_nexus.40001", "模型配置未启用：{0:model}"),
+
+    @Schema(description = "模型协议不受支持")
+    PROTOCOL_UNSUPPORTED("model_nexus.40002", "模型协议不受支持：{0:protocol}"),
+
+    @Schema(description = "协议不支持 Embedding")
+    EMBEDDING_UNSUPPORTED("model_nexus.40003", "协议 [{0:protocol}] 不支持 Embedding"),
+
+    @Schema(description = "Tool 不可在 model-nexus 执行")
+    TOOL_EXECUTION_UNSUPPORTED("model_nexus.40004", "Tool [{0:tool}] 不可在 model-nexus 执行"),
+
+    @Schema(description = "机构下模型名称已存在")
+    MODEL_NAME_DUPLICATE("model_nexus.40005", "同一机构下模型名称已存在：{0:modelName}"),
+
+    @Schema(description = "参数无效")
+    PARAM_INVALID("model_nexus.40006", "参数无效：{0:param}");
+
+    private final String code;
+
+    private final String messageTemplate;
+
+    NexusErrorCode(String code, String messageTemplate) {
+        this.code = code;
+        this.messageTemplate = messageTemplate;
+    }
+
+    @Override
+    public String code() {
+        return code;
+    }
+
+    @Override
+    public String messageTemplate() {
+        return messageTemplate;
+    }
+}
