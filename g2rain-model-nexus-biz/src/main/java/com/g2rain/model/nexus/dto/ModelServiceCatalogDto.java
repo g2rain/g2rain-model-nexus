@@ -32,11 +32,11 @@ public class ModelServiceCatalogDto extends BaseDto {
     private String modelName;
 
     /**
-     * 模型类型[LLM,VECTOR]
+     * 模型类型[LLM,VECTOR,RERANK]
      */
     @NotBlank(groups = CreateGroup.class)
     @Size(max = 32)
-    @Schema(description = "模型类型[LLM,VECTOR]（新增必填）", maxLength = 32)
+    @Schema(description = "模型类型[LLM,VECTOR,RERANK]（新增必填）", maxLength = 32)
     private String modelType;
 
     /**

@@ -3,8 +3,10 @@ package com.g2rain.model.nexus.api;
 
 import com.g2rain.model.nexus.dto.ChatCompletionRequest;
 import com.g2rain.model.nexus.dto.EmbeddingsRequest;
+import com.g2rain.model.nexus.dto.RerankRequest;
 import com.g2rain.model.nexus.vo.ChatCompletionResponse;
 import com.g2rain.model.nexus.vo.EmbeddingsResponse;
+import com.g2rain.model.nexus.vo.RerankResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.validation.annotation.Validated;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  * <ul>
  *   <li>{@code POST /chat/completions}：对话补全</li>
  *   <li>{@code POST /embeddings}：文本向量化</li>
+ *   <li>{@code POST /rerank}：文档重排序</li>
  * </ul>
  * 具体路径前缀（如 {@code /v1}）由实现侧 Controller 声明；
  * 本接口只约定方法映射与入参/出参类型。
@@ -47,4 +50,14 @@ public interface OpenAiCompatibleApi {
     @PostMapping("/embeddings")
     @Operation(summary = "Embeddings", description = "根据 model 路由厂商 embedding 模型")
     EmbeddingsResponse embeddings(@RequestBody @Validated EmbeddingsRequest request);
+
+    /**
+     * 文档重排序：按请求 {@code model} 路由到启用中的 RERANK 接入配置并调用厂商。
+     *
+     * @param request OpenAI 兼容风格 rerank 请求体
+     * @return OpenAI 兼容风格 rerank 响应
+     */
+    @PostMapping("/rerank")
+    @Operation(summary = "Rerank", description = "根据 model 路由厂商 rerank 模型")
+    RerankResponse rerank(@RequestBody @Validated RerankRequest request);
 }

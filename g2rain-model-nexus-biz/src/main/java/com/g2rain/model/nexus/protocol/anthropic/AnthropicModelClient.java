@@ -1,4 +1,4 @@
-package com.g2rain.model.nexus.protocol;
+package com.g2rain.model.nexus.protocol.anthropic;
 
 
 import com.anthropic.client.AnthropicClient;
@@ -6,6 +6,9 @@ import com.anthropic.models.messages.Model;
 import com.g2rain.common.exception.BusinessException;
 import com.g2rain.model.nexus.enums.ModelProtocol;
 import com.g2rain.model.nexus.enums.NexusErrorCode;
+import com.g2rain.model.nexus.protocol.ModelClient;
+import com.g2rain.model.nexus.protocol.ModelProtocolSupport;
+import com.g2rain.model.nexus.protocol.RerankModel;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.ai.anthropic.AnthropicChatModel;
@@ -22,7 +25,7 @@ import org.springframework.stereotype.Component;
  * {@link AnthropicChatOptions}，经 {@link AnthropicSetup} 创建同步
  * {@link AnthropicClient}，再组装 Spring AI {@link AnthropicChatModel}。
  * <p>
- * 当前未接入 Embedding；调用 {@link #createEmbeddingModel} 会抛出业务异常。
+ * 当前未接入 Embedding / Rerank；调用对应 create 方法会抛出业务异常。
  *
  * @author alpha
  * @since 2026/8/1
@@ -123,6 +126,25 @@ public class AnthropicModelClient implements ModelClient {
         // 第二个参数填入协议名，便于错误文案展示
         throw new BusinessException(
             NexusErrorCode.EMBEDDING_UNSUPPORTED,
+            protocol().name()
+        );
+    }
+
+    /**
+     * 基于接入明细创建 Rerank 模型客户端。
+     * <p>
+     * Anthropic 路径尚未接入 Rerank，固定抛出
+     * {@link NexusErrorCode#RERANK_UNSUPPORTED}，避免返回 null 导致 NPE。
+     * </p>
+     *
+     * @param profile 已启用的模型服务明细
+     * @return 不会正常返回；始终抛业务异常
+     * @throws BusinessException 协议不支持 Rerank
+     */
+    @Override
+    public RerankModel createRerankModel(ModelServiceDetailVO profile) {
+        throw new BusinessException(
+            NexusErrorCode.RERANK_UNSUPPORTED,
             protocol().name()
         );
     }

@@ -1,9 +1,12 @@
-package com.g2rain.model.nexus.protocol;
+package com.g2rain.model.nexus.protocol.gemini;
 
 
 import com.g2rain.common.exception.BusinessException;
 import com.g2rain.model.nexus.enums.ModelProtocol;
 import com.g2rain.model.nexus.enums.NexusErrorCode;
+import com.g2rain.model.nexus.protocol.ModelClient;
+import com.g2rain.model.nexus.protocol.ModelProtocolSupport;
+import com.g2rain.model.nexus.protocol.RerankModel;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
 import com.google.genai.Client;
 import com.google.genai.types.HttpOptions;
@@ -22,7 +25,7 @@ import java.util.Map;
  * 采样参数写入 {@link GoogleGenAiChatOptions}，鉴权与 HTTP（超时 / 可选 baseUrl）
  * 写入 {@link HttpOptions}。
  * <p>
- * 当前未接入 Embedding；调用 {@link #createEmbeddingModel} 会抛出业务异常。
+ * 当前未接入 Embedding / Rerank；调用对应 create 方法会抛出业务异常。
  *
  * @author alpha
  * @since 2026/8/1
@@ -109,6 +112,25 @@ public class GoogleGenAiModelClient implements ModelClient {
         // 尚未实现 Gemini Embedding：明确失败，避免返回 null 导致 NPE
         throw new BusinessException(
             NexusErrorCode.EMBEDDING_UNSUPPORTED,
+            protocol().name()
+        );
+    }
+
+    /**
+     * 基于接入明细创建 Rerank 模型客户端。
+     * <p>
+     * Gemini Rerank 尚未实现，固定抛出
+     * {@link NexusErrorCode#RERANK_UNSUPPORTED}，避免返回 null 导致 NPE。
+     * </p>
+     *
+     * @param profile 已启用的模型服务明细
+     * @return 不会正常返回；始终抛业务异常
+     * @throws BusinessException 协议不支持 Rerank
+     */
+    @Override
+    public RerankModel createRerankModel(ModelServiceDetailVO profile) {
+        throw new BusinessException(
+            NexusErrorCode.RERANK_UNSUPPORTED,
             protocol().name()
         );
     }

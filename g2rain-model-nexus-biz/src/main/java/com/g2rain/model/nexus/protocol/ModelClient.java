@@ -10,16 +10,16 @@ import org.springframework.ai.embedding.EmbeddingModel;
  * 模型协议客户端策略接口。
  * <p>
  * 每种 {@link ModelProtocol} 对应一个实现类，负责把接入明细
- * {@link ModelServiceDetailVO} 转成 Spring AI 可调用的
- * {@link ChatModel} / {@link EmbeddingModel}。
+ * {@link ModelServiceDetailVO} 转成可调用的
+ * {@link ChatModel} / {@link EmbeddingModel} / {@link RerankModel}。
  * <p>
  * 由 {@link ModelClientRegistry} 收集全部实现并按协议路由。
  *
  * @author alpha
  * @see ModelClientRegistry
- * @see OpenAiModelClient
- * @see AnthropicModelClient
- * @see GoogleGenAiModelClient
+ * @see com.g2rain.model.nexus.protocol.openai.OpenAiModelClient
+ * @see com.g2rain.model.nexus.protocol.anthropic.AnthropicModelClient
+ * @see com.g2rain.model.nexus.protocol.gemini.GoogleGenAiModelClient
  * @since 2026/8/1
  */
 public interface ModelClient {
@@ -55,4 +55,16 @@ public interface ModelClient {
      * @return 可执行 Embedding 调用的 Spring AI EmbeddingModel
      */
     EmbeddingModel createEmbeddingModel(ModelServiceDetailVO profile);
+
+    /**
+     * 基于接入明细创建 Rerank 模型客户端。
+     * <p>
+     * 若当前协议不支持 Rerank，实现应抛出业务异常
+     * （如 {@link com.g2rain.model.nexus.enums.NexusErrorCode#RERANK_UNSUPPORTED}），
+     * 而不是返回 null。
+     *
+     * @param profile 已启用的模型服务明细
+     * @return 可执行 Rerank 调用的 {@link RerankModel}
+     */
+    RerankModel createRerankModel(ModelServiceDetailVO profile);
 }

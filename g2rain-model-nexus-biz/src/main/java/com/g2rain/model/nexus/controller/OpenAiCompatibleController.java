@@ -4,9 +4,11 @@ package com.g2rain.model.nexus.controller;
 import com.g2rain.model.nexus.api.OpenAiCompatibleApi;
 import com.g2rain.model.nexus.dto.ChatCompletionRequest;
 import com.g2rain.model.nexus.dto.EmbeddingsRequest;
+import com.g2rain.model.nexus.dto.RerankRequest;
 import com.g2rain.model.nexus.service.OpenAiCompatibleService;
 import com.g2rain.model.nexus.vo.ChatCompletionResponse;
 import com.g2rain.model.nexus.vo.EmbeddingsResponse;
+import com.g2rain.model.nexus.vo.RerankResponse;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -58,5 +60,19 @@ public class OpenAiCompatibleController implements OpenAiCompatibleApi {
     @Override
     public EmbeddingsResponse embeddings(EmbeddingsRequest request) {
         return openAiCompatibleService.embed(request);
+    }
+
+    /**
+     * 文档重排序：按请求 {@code model} 路由到启用中的 RERANK 接入配置并调用厂商。
+     * <p>
+     * HTTP 入口仅转发到 {@link OpenAiCompatibleService#rerank}，不做业务编排。
+     * </p>
+     *
+     * @param request OpenAI 兼容风格 rerank 请求体
+     * @return OpenAI 兼容风格 rerank 响应
+     */
+    @Override
+    public RerankResponse rerank(RerankRequest request) {
+        return openAiCompatibleService.rerank(request);
     }
 }

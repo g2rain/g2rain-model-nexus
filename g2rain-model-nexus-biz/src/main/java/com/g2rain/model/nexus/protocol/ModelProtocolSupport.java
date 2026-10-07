@@ -2,8 +2,13 @@ package com.g2rain.model.nexus.protocol;
 
 
 import com.g2rain.common.utils.Strings;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
+import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Objects;
 
@@ -13,12 +18,12 @@ import java.util.Objects;
  * 统一处理超时兜底、baseUrl 规范化、BigDecimal 转 Double 等，
  * 避免 OpenAI / Anthropic / Gemini 实现各自重复一套逻辑。
  * <p>
- * 本类为包内工具，禁止实例化。
+ * 供 {@code protocol.openai / anthropic / gemini} 等子包共用，禁止实例化。
  *
  * @author alpha
  * @since 2026/8/1
  */
-final class ModelProtocolSupport {
+public final class ModelProtocolSupport {
 
     /**
      * 禁止实例化。
@@ -33,7 +38,7 @@ final class ModelProtocolSupport {
      * @param timeoutMs 配置毫秒；null 或 &lt;=0 视为无效
      * @return 非 null 的超时 Duration
      */
-    static Duration resolveTimeout(Integer timeoutMs) {
+    public static Duration resolveTimeout(Integer timeoutMs) {
         // 未配置、或配置了非正数：视为无效，走默认 60 秒
         if (Objects.isNull(timeoutMs) || timeoutMs <= 0) {
             return Duration.ofSeconds(60);
@@ -51,7 +56,7 @@ final class ModelProtocolSupport {
      * @param timeoutMs 配置毫秒；null 或 &lt;=0 视为无效
      * @return 超时毫秒
      */
-    static Integer resolveTimeoutMs(Integer timeoutMs) {
+    public static Integer resolveTimeoutMs(Integer timeoutMs) {
         // 与 resolveTimeout 同一套兜底语义，只是返回类型是毫秒 Integer（Gemini HttpOptions 用）
         if (Objects.isNull(timeoutMs) || timeoutMs <= 0) {
             return 60_000;
@@ -69,7 +74,7 @@ final class ModelProtocolSupport {
      * @param url 配置中的 baseUrl
      * @return 规范化后的根地址，或原空白值
      */
-    static String normalizeBaseUrl(String url) {
+    public static String normalizeBaseUrl(String url) {
         // 空/空白：不做处理，调用方可能依赖「未配置 baseUrl」表示用官方默认域名
         if (Strings.isBlank(url)) {
             return url;
@@ -87,7 +92,7 @@ final class ModelProtocolSupport {
      * @param value 配置表中的 temperature / topP 等
      * @return Double 或 null
      */
-    static Double toDouble(BigDecimal value) {
+    public static Double toDouble(BigDecimal value) {
         // 库表用 BigDecimal 存小数；Spring AI options 要 Double
         // null 表示「不设置该采样参数」，由模型/SDK 默认值生效
         if (Objects.isNull(value)) {
@@ -96,5 +101,27 @@ final class ModelProtocolSupport {
 
         // 非 null：转为 double 包装类型
         return value.doubleValue();
+    }
+
+    /**
+     * 创建带 Bearer 鉴权的同步 {@link RestClient}（供无官方 SDK 的协议能力使用，如 Rerank）。
+     *
+     * @param baseUrl 已规范化的服务根地址
+     * @param apiKey  API Key；空白则不带 Authorization
+     * @param timeout 连接与读超时
+     * @return RestClient
+     */
+    public static RestClient createBearerRestClient(String baseUrl, String apiKey, Duration timeout) {
+        Duration resolved = Objects.nonNull(timeout) ? timeout : Duration.ofSeconds(60);
+        HttpClient httpClient = HttpClient.newBuilder().connectTimeout(resolved).build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(resolved);
+        RestClient.Builder builder = RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory)
+            .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        if (Strings.isNotBlank(apiKey)) {
+            builder.defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey);
+        }
+
+        return builder.build();
     }
 }
