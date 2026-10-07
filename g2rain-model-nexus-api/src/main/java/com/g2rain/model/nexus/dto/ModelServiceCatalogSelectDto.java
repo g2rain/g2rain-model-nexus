@@ -29,9 +29,9 @@ public class ModelServiceCatalogSelectDto extends BaseSelectListDto {
     private String modelName;
 
     /**
-     * 模型类型[LLM,VECTOR]
+     * 模型类型[LLM,VECTOR,RERANK]
      */
-    @Schema(description = "模型类型[LLM,VECTOR]")
+    @Schema(description = "模型类型[LLM,VECTOR,RERANK]")
     private String modelType;
 
     /**

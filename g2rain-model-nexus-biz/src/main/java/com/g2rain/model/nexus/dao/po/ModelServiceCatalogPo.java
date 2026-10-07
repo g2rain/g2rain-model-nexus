@@ -26,7 +26,7 @@ public class ModelServiceCatalogPo extends BasePo {
     private String modelName;
 
     /**
-     * 模型类型[LLM,VECTOR]
+     * 模型类型[LLM,VECTOR,RERANK]
      */
     private String modelType;
 

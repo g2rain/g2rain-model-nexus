@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 /**
  * 模型网关业务错误码。
  * <p>
- * 实现平台 {@link ErrorCode}，用于协议不支持、Embedding 未接入、
+ * 实现平台 {@link ErrorCode}，用于协议不支持、Embedding / Rerank 未接入、
  * 工具不可在网关执行等场景的明确失败语义。
  *
  * @author alpha
@@ -31,7 +31,10 @@ public enum NexusErrorCode implements ErrorCode {
     MODEL_NAME_DUPLICATE("model_nexus.40005", "同一机构下模型名称已存在：{0:modelName}"),
 
     @Schema(description = "参数无效")
-    PARAM_INVALID("model_nexus.40006", "参数无效：{0:param}");
+    PARAM_INVALID("model_nexus.40006", "参数无效：{0:param}"),
+
+    @Schema(description = "协议不支持 Rerank")
+    RERANK_UNSUPPORTED("model_nexus.40007", "协议 [{0:protocol}] 不支持 Rerank");
 
     private final String code;
 
