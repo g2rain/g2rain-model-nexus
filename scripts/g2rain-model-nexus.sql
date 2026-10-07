@@ -15,7 +15,7 @@ DROP TABLE IF EXISTS `model_service_catalog`;
 CREATE TABLE `model_service_catalog` (
     `id` BIGINT NOT NULL COMMENT                                                                        '主键标识',
     `model_name` VARCHAR(128) NOT NULL COMMENT                                                          '模型调用标识',
-    `model_type` VARCHAR(32) NOT NULL COMMENT                                                           '模型类型[LLM,VECTOR]',
+    `model_type` VARCHAR(32) NOT NULL COMMENT                                                           '模型类型[LLM,VECTOR,RERANK]',
     `resource_type` VARCHAR(32) NOT NULL COMMENT                                                        '资源类型[MARKET:模型广场资源,CUSTOM:自定义资源]',
     `provider` VARCHAR(64) NOT NULL COMMENT                                                             '模型供应商',
     `protocol` VARCHAR(64) NOT NULL COMMENT                                                             '模型协议类型',

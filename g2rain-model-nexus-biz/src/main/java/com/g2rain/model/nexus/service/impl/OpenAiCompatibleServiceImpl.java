@@ -11,19 +11,24 @@ import com.g2rain.model.nexus.dto.ChatCompletionRequest;
 import com.g2rain.model.nexus.dto.EmbeddingsRequest;
 import com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto;
 import com.g2rain.model.nexus.dto.ModelUsageRecordDto;
+import com.g2rain.model.nexus.dto.RerankRequest;
 import com.g2rain.model.nexus.enums.ModelStatus;
 import com.g2rain.model.nexus.enums.ModelType;
 import com.g2rain.model.nexus.protocol.ModelClient;
 import com.g2rain.model.nexus.protocol.ModelClientRegistry;
+import com.g2rain.model.nexus.protocol.RerankCallResult;
+import com.g2rain.model.nexus.protocol.RerankModel;
 import com.g2rain.model.nexus.schema.EmbeddingData;
 import com.g2rain.model.nexus.schema.EmbeddingUsage;
 import com.g2rain.model.nexus.service.ModelServiceProfileService;
 import com.g2rain.model.nexus.service.ModelUsageRecordService;
 import com.g2rain.model.nexus.service.OpenAiCompatibleService;
 import com.g2rain.model.nexus.support.OpenAiChatServerConverter;
+import com.g2rain.model.nexus.support.OpenAiRerankConverter;
 import com.g2rain.model.nexus.vo.ChatCompletionResponse;
 import com.g2rain.model.nexus.vo.EmbeddingsResponse;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
+import com.g2rain.model.nexus.vo.RerankResponse;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.messages.Message;
@@ -54,7 +59,7 @@ import java.util.Objects;
  * <ul>
  *   <li>按 model 名称解析启用中的 {@link ModelServiceDetailVO}</li>
  *   <li>通过 {@link ModelClientRegistry} 按协议获取 {@link ModelClient}</li>
- *   <li>调用 Spring AI Chat / Embedding，并转换为 OpenAI 兼容响应</li>
+ *   <li>调用 Chat / Embedding / Rerank，并转换为 OpenAI 兼容响应</li>
  *   <li>尽力写入用量记录（失败只打日志，不影响主流程）</li>
  * </ul>
  *
@@ -217,12 +222,57 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
     }
 
     /**
+     * 执行文档重排序。
+     * <p>
+     * 主流程：解析 ACTIVE 的 RERANK 明细 → 创建 RerankModel →
+     * 同步 call → 尽力落库用量 → 返回兼容响应。
+     * 不支持 Rerank 的协议会在创建阶段抛业务异常。
+     * </p>
+     *
+     * @param request OpenAI 兼容风格 rerank 请求
+     * @return OpenAI 兼容风格 rerank 响应
+     */
+    @Override
+    public RerankResponse rerank(RerankRequest request) {
+        // 1. 解析启用配置并创建 RerankModel（不支持 Rerank 的协议会在创建阶段抛错）
+        ModelServiceDetailVO profile = requireActiveProfile(
+            ModelType.RERANK, request.getModel()
+        );
+
+        ModelClient modelClient = modelClientRegistry.require(
+            profile.getProtocol()
+        );
+
+        RerankModel rerankModel = modelClient.createRerankModel(profile);
+
+        try {
+            // 2. 调用重排序模型（协议层只回 results + usage）
+            RerankCallResult callResult = rerankModel.call(request);
+
+            // 3. 落库用量（厂商未回 usage 时为 null，recordUsage 直接跳过）
+            recordUsage(profile, callResult.usage());
+
+            // 4. 组装对外 VO；model 回显请求侧标识（路由键），与 embeddings 一致
+            return OpenAiRerankConverter.toResponse(callResult, request.getModel());
+        } catch (BusinessException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Rerank 调用失败, model={}", profile.getModelName(), ex);
+            throw new BusinessException(
+                SystemErrorCode.REMOTE_SERVICE_ERROR,
+                profile.getProvider(),
+                ex.getMessage()
+            );
+        }
+    }
+
+    /**
      * 按模型类型与名称查询当前租户下启用中的接入明细。
      * <p>
      * 同时要求 profile 与 catalog 均为 {@link ModelStatus#ACTIVE}；
      * 查无结果时抛出资源不存在。
      *
-     * @param modelType 模型类型（LLM / VECTOR）
+     * @param modelType 模型类型（LLM / VECTOR / RERANK）
      * @param modelName 请求中的 model 标识（对应目录 model_name）
      * @return 首条匹配的明细 VO
      */

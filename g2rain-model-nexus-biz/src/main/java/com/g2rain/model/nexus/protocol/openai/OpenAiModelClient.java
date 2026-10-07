@@ -1,7 +1,11 @@
-package com.g2rain.model.nexus.protocol;
+package com.g2rain.model.nexus.protocol.openai;
 
 
 import com.g2rain.model.nexus.enums.ModelProtocol;
+import com.g2rain.model.nexus.protocol.ModelClient;
+import com.g2rain.model.nexus.protocol.ModelClientRegistry;
+import com.g2rain.model.nexus.protocol.ModelProtocolSupport;
+import com.g2rain.model.nexus.protocol.RerankModel;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
 import com.openai.client.OpenAIClient;
 import io.micrometer.observation.ObservationRegistry;
@@ -23,7 +27,8 @@ import java.util.Map;
  * 同时支持官方 OpenAI 以及 DeepSeek 等 OpenAI API 兼容网关：
  * 只要提供正确的 {@code baseUrl} / {@code apiKey} / {@code modelName} 即可。
  * <p>
- * Chat 与 Embedding 均基于 Spring AI OpenAI 适配与官方 Java SDK 同步客户端。
+ * Chat / Embedding 基于 Spring AI OpenAI 适配与官方 Java SDK；
+ * Rerank 因 SDK 无官方接口，走兼容网关 HTTP {@code POST /rerank}。
  *
  * @author alpha
  * @since 2026/8/1
@@ -173,5 +178,27 @@ public class OpenAiModelClient implements ModelClient {
             .openAiClient(client)
             .options(options)
             .build();
+    }
+
+    /**
+     * 基于接入明细创建 Rerank 模型客户端。
+     * <p>
+     * 使用与 Chat / Embedding 相同的 baseUrl / apiKey / modelName / timeout，
+     * 组装 {@link OpenAiRerankModel} 调用兼容网关 {@code /rerank}。
+     * </p>
+     *
+     * @param profile 已启用的模型服务明细
+     * @return 可执行 Rerank 调用的 {@link RerankModel}
+     */
+    @Override
+    public RerankModel createRerankModel(ModelServiceDetailVO profile) {
+        return new OpenAiRerankModel(
+            ModelProtocolSupport.createBearerRestClient(
+                ModelProtocolSupport.normalizeBaseUrl(profile.getBaseUrl()),
+                profile.getApiKey(),
+                ModelProtocolSupport.resolveTimeout(profile.getTimeoutMs())
+            ),
+            profile.getModelName()
+        );
     }
 }
