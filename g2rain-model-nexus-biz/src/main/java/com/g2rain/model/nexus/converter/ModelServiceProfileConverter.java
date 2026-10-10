@@ -5,6 +5,7 @@ import com.g2rain.model.nexus.dao.po.ModelServiceDetailPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceProfilePo;
 import com.g2rain.model.nexus.dto.ModelServiceProfileDto;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
+import com.g2rain.model.nexus.vo.ModelServiceOptionVo;
 import com.g2rain.model.nexus.vo.ModelServiceProfileVo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -42,6 +43,11 @@ public interface ModelServiceProfileConverter {
     @Mapping(target = "createTime", source = "createTime", qualifiedByName = "localDateTimeToString")
     @Mapping(target = "updateTime", source = "updateTime", qualifiedByName = "localDateTimeToString")
     ModelServiceDetailVO po2detailVo(ModelServiceDetailPo po);
+
+    /**
+     * DetailPo → 下拉选项（仅 id + modelName）
+     */
+    ModelServiceOptionVo po2option(ModelServiceDetailPo po);
 
     /**
      * Dto -> Po

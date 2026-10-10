@@ -8,6 +8,7 @@ import com.g2rain.model.nexus.dto.ModelServiceProfileDto;
 import com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto;
 import com.g2rain.model.nexus.service.ModelServiceProfileService;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
+import com.g2rain.model.nexus.vo.ModelServiceOptionVo;
 import com.g2rain.web.interceptors.annotations.IdentityInject;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -38,6 +39,12 @@ public class ModelServiceProfileController implements ModelServiceProfileApi {
     @IdentityInject(organIdPropertyName = "organId")
     public Result<List<ModelServiceDetailVO>> selectList(ModelServiceProfileSelectDto selectDto) {
         return Result.success(modelServiceProfileService.selectList(selectDto));
+    }
+
+    @Override
+    @IdentityInject(organIdPropertyName = "organId")
+    public Result<List<ModelServiceOptionVo>> selectActiveOptions() {
+        return Result.success(modelServiceProfileService.selectActiveOptions());
     }
 
     @Override

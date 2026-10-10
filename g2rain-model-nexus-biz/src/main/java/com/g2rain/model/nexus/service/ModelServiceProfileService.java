@@ -5,6 +5,7 @@ import com.g2rain.common.model.PageSelectListDto;
 import com.g2rain.model.nexus.dto.ModelServiceProfileDto;
 import com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
+import com.g2rain.model.nexus.vo.ModelServiceOptionVo;
 
 import java.util.List;
 
@@ -23,6 +24,13 @@ public interface ModelServiceProfileService {
      * @return VO 对象列表
      */
     List<ModelServiceDetailVO> selectList(ModelServiceProfileSelectDto selectDto);
+
+    /**
+     * 查询 ACTIVE 模型下拉选项（仅 id + modelName）。
+     *
+     * @return ACTIVE 模型选项列表
+     */
+    List<ModelServiceOptionVo> selectActiveOptions();
 
     /**
      * 根据条件分页查询
