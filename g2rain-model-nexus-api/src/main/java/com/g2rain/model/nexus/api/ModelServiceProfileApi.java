@@ -5,6 +5,7 @@ import com.g2rain.common.model.PageSelectListDto;
 import com.g2rain.common.model.Result;
 import com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
+import com.g2rain.model.nexus.vo.ModelServiceOptionVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +31,15 @@ public interface ModelServiceProfileApi {
     @GetMapping("/list")
     @Operation(summary = "查询模型服务配置列表", description = "根据查询条件返回模型服务配置列表")
     Result<List<ModelServiceDetailVO>> selectList(ModelServiceProfileSelectDto selectDto);
+
+    /**
+     * 查询 ACTIVE 模型下拉选项（仅 id + modelName）。
+     *
+     * @return ACTIVE 模型选项列表
+     */
+    @GetMapping("/options")
+    @Operation(summary = "查询 ACTIVE 模型下拉选项", description = "按租户隔离查询 ACTIVE 配置，仅返回 id 与 modelName")
+    Result<List<ModelServiceOptionVo>> selectActiveOptions();
 
     /**
      * 根据条件分页查询

@@ -474,4 +474,50 @@
     <select id="selectListWithoutIsolation" parameterType="com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto" resultMap="DetailResultMap">
         <include refid="selectListBody"/>
     </select>
+
+    <!-- selectOptionsList：仅 p.id + c.model_name -->
+    <sql id="selectOptionsListBody">
+        SELECT p.id, c.model_name
+        FROM model_service_profile p
+        INNER JOIN model_service_catalog c ON c.id = p.catalog_id
+        AND (c.delete_flag = 0 OR c.delete_flag IS NULL)
+        <where>
+            <if test="id != null">
+                AND p.id = #{id, jdbcType=BIGINT}
+            </if>
+            <if test="ids != null and ids.size() > 0">
+                AND p.id IN
+                <foreach collection="ids" item="item" open="(" separator="," close=")">
+                    #{item, jdbcType=BIGINT}
+                </foreach>
+            </if>
+            <if test="organId != null">
+                AND p.organ_id = #{organId, jdbcType=BIGINT}
+            </if>
+            <if test="catalogId != null">
+                AND p.catalog_id = #{catalogId, jdbcType=BIGINT}
+            </if>
+            <if test="modelName != null">
+                AND c.model_name = #{modelName, jdbcType=VARCHAR}
+            </if>
+            <if test="modelType != null">
+                AND c.model_type = #{modelType, jdbcType=VARCHAR}
+            </if>
+            <if test="resourceType != null">
+                AND c.resource_type = #{resourceType, jdbcType=VARCHAR}
+            </if>
+            <if test="status != null">
+                AND p.status = #{status, jdbcType=VARCHAR}
+            </if>
+            <if test="catalogStatus != null">
+                AND c.status = #{catalogStatus, jdbcType=VARCHAR}
+            </if>
+            AND (p.delete_flag = 0 OR p.delete_flag IS NULL)
+        </where>
+        <include refid="dynamicOrderBy"/>
+    </sql>
+
+    <select id="selectOptionsList" parameterType="com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto" resultMap="DetailResultMap">
+        <include refid="selectOptionsListBody"/>
+    </select>
 </mapper>

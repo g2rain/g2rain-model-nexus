@@ -13,8 +13,11 @@ import com.g2rain.model.nexus.dao.po.ModelServiceDetailPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceProfilePo;
 import com.g2rain.model.nexus.dto.ModelServiceProfileDto;
 import com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto;
+import com.g2rain.model.nexus.enums.ModelStatus;
+import com.g2rain.model.nexus.enums.ModelType;
 import com.g2rain.model.nexus.service.ModelServiceProfileService;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
+import com.g2rain.model.nexus.vo.ModelServiceOptionVo;
 import com.g2rain.mybatis.pagination.PageContext;
 import com.g2rain.mybatis.pagination.model.Page;
 import jakarta.annotation.Resource;
@@ -51,6 +54,18 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
         return modelServiceProfileDao.selectList(selectDto)
             .stream()
             .map(ModelServiceProfileConverter.INSTANCE::po2detailVo)
+            .toList();
+    }
+
+    @Override
+    public List<ModelServiceOptionVo> selectActiveOptions() {
+        ModelServiceProfileSelectDto selectDto = new ModelServiceProfileSelectDto();
+        selectDto.setModelType(ModelType.LLM.name());
+        selectDto.setStatus(ModelStatus.ACTIVE.name());
+        selectDto.setCatalogStatus(ModelStatus.ACTIVE.name());
+        return modelServiceProfileDao.selectOptionsList(selectDto)
+            .stream()
+            .map(ModelServiceProfileConverter.INSTANCE::po2option)
             .toList();
     }
 

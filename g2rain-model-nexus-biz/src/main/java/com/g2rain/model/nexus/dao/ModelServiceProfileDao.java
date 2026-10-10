@@ -110,4 +110,12 @@ public interface ModelServiceProfileDao {
      */
     @IgnoreIsolation
     List<ModelServiceDetailPo> selectListWithoutIsolation(ModelServiceProfileSelectDto selectDto);
+
+    /**
+     * 按条件查询下拉选项字段（仅 id / model_name），本租户隔离。
+     *
+     * @param selectDto 查询条件 DTO（常用 status）
+     * @return 短字段明细列表
+     */
+    List<ModelServiceDetailPo> selectOptionsList(ModelServiceProfileSelectDto selectDto);
 }
