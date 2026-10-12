@@ -84,6 +84,6 @@ VALUES (1, 'Qwen3.6-27B-bw', 'LLM', 'CUSTOM', '千问大语言模型', 'OPENAI',
        (3, 'Qwen3.8-27B', 'RERANK', 'CUSTOM', '千问向量模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问重排序模型');
 
 INSERT INTO `model_service_profile` (`id`, `organ_id`, `catalog_id`, `temperature`, `top_p`, `max_tokens`, `timeout_ms`, `status`, `description`)
-VALUES (4, 2, 1, 0.70, 1.00, 4096, 120000, 'ACTIVE', '千问自建大语言模型'),
+VALUES (4, 2, 1, 0.00, 1.00, 4096, 120000, 'ACTIVE', '千问自建大语言模型'),
        (5, 2, 2, NULL, NULL, NULL, 120000, 'ACTIVE', '千问自建向量模型'),
        (6, 2, 3, NULL, NULL, NULL, 120000, 'ACTIVE', '千问重排序模型');
