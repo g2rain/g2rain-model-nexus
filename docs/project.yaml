@@ -1,0 +1,18 @@
+schemaVersion: 1
+name: g2rain-model-nexus
+family: business-service
+role: 多模型接入、OpenAI 兼容网关与用量管理服务
+language: Java
+buildTool: Maven
+architectureBaseline: {repository: https://github.com/g2rain/g2rain, ref: architecture-v1.0.0, profile: docs/architecture/profiles/java-domain-service, version: 1.0.0, status: planned, deviations: docs/architecture/deviations.md}
+ownership:
+  owns: [模型服务目录与接入资料, 模型协议适配, OpenAI 兼容聊天与 Embeddings, 模型用量记录]
+  excludes: [Agent 编排与任务状态, MCP 工具注册, Agent/Skill 配置, 网关鉴权与部署编排]
+modules:
+  - {name: g2rain-model-nexus-api, path: g2rain-model-nexus-api, role: OpenAI 兼容及模型管理契约, mayDependOn: []}
+  - {name: g2rain-model-nexus-biz, path: g2rain-model-nexus-biz, role: 模型路由、协议适配、持久化与接口实现, mayDependOn: [g2rain-model-nexus-api]}
+  - {name: g2rain-model-nexus-startup, path: g2rain-model-nexus-startup, role: Spring Boot、异常映射和运行组装, mayDependOn: [g2rain-model-nexus-biz]}
+runtime: {mainClass: com.g2rain.model.nexus.Application, defaultPort: 8080, defaultProfile: nacos, minimumVersions: {java: "25", mysql: "8.0.13"}, dependencies: [MySQL, Redis, Nacos, 模型供应商服务]}
+commands: {verify: mvn clean verify, run: "mvn -pl g2rain-model-nexus-startup -am spring-boot:run", codegen: mvn g2rain-crafter:bootstrap, image: "./build.sh <tag>"}
+validation: {lastVerifiedAt: null, command: mvn clean verify, result: not-run, note: 文档初始化未运行构建。}
+documentation: {entry: docs/index.md, architecture: docs/architecture/overview.md, decisions: docs/decisions}
