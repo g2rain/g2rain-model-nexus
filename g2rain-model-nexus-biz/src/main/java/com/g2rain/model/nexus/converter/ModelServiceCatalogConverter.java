@@ -1,11 +1,13 @@
 package com.g2rain.model.nexus.converter;
 
 import com.g2rain.common.converter.CommonConverter;
+import com.g2rain.common.utils.Strings;
 import com.g2rain.model.nexus.dao.po.ModelServiceCatalogPo;
 import com.g2rain.model.nexus.dto.ModelServiceCatalogDto;
 import com.g2rain.model.nexus.vo.ModelServiceCatalogVo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 import org.mapstruct.factory.Mappers;
 
 import java.time.LocalDateTime;
@@ -28,10 +30,20 @@ public interface ModelServiceCatalogConverter {
     /**
      * Po -> Vo
      * 自动将 createTime 和 updateTime 从 {@link LocalDateTime} 转换为 {@link String}
+     * apiKey 不落 VO，仅映射是否已配置
      */
+    @Mapping(target = "apiKeyConfigured", source = "apiKey", qualifiedByName = "apiKeyToConfigured")
     @Mapping(target = "createTime", source = "createTime", qualifiedByName = "localDateTimeToString")
     @Mapping(target = "updateTime", source = "updateTime", qualifiedByName = "localDateTimeToString")
     ModelServiceCatalogVo po2vo(ModelServiceCatalogPo po);
+
+    /**
+     * 访问密钥是否已配置（不回传明文）
+     */
+    @Named("apiKeyToConfigured")
+    default Boolean apiKeyToConfigured(String apiKey) {
+        return Strings.isNotBlank(apiKey);
+    }
 
     /**
      * Dto -> Po
