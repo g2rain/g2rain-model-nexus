@@ -79,14 +79,6 @@ public class ModelServiceCatalogDto extends BaseDto {
     private String apiKey;
 
     /**
-     * 状态[ACTIVE:启用,INACTIVE:禁用]
-     */
-    @NotBlank(groups = CreateGroup.class)
-    @Size(max = 32)
-    @Schema(description = "状态[ACTIVE:启用,INACTIVE:禁用]（新增必填）", maxLength = 32)
-    private String status;
-
-    /**
      * 说明
      */
     @Size(max = 500)

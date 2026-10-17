@@ -81,6 +81,7 @@ public interface ModelServiceProfileConverter {
     })
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "deleteFlag", ignore = true)
+    @Mapping(target = "status", ignore = true)
     @Mapping(target = "createTime", source = "createTime", qualifiedByName = "stringToLocalDateTime")
     @Mapping(target = "updateTime", source = "updateTime", qualifiedByName = "stringToLocalDateTime")
     ModelServiceProfilePo dto2po(ModelServiceProfileDto dto);

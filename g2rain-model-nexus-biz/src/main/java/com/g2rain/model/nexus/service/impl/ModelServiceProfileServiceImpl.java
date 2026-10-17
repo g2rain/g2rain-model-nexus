@@ -213,7 +213,6 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
         catalogDto.setProvider(dto.getProvider());
         catalogDto.setProtocol(dto.getProtocol());
         catalogDto.setBaseUrl(dto.getBaseUrl());
-        catalogDto.setStatus(ModelStatus.ACTIVE.name());
         catalogDto.setDescription(dto.getDescription());
         if (Strings.isNotBlank(dto.getApiKey())) {
             catalogDto.setApiKey(dto.getApiKey().trim());

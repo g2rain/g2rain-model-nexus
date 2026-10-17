@@ -105,13 +105,6 @@ public class ModelServiceProfileDto extends BaseDto {
     private Integer timeoutMs;
 
     /**
-     * 状态（save 忽略；新增由服务端写 ACTIVE，变更走 updateStatus）
-     */
-    @Size(max = 32)
-    @Schema(description = "状态[ACTIVE:启用, INACTIVE:禁用]（save 忽略）", maxLength = 32)
-    private String status;
-
-    /**
      * 模型说明
      */
     @Size(max = 500)

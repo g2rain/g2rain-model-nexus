@@ -53,6 +53,7 @@ public interface ModelServiceCatalogConverter {
      */
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "deleteFlag", ignore = true)
+    @Mapping(target = "status", ignore = true)
     @Mapping(target = "createTime", source = "createTime", qualifiedByName = "stringToLocalDateTime")
     @Mapping(target = "updateTime", source = "updateTime", qualifiedByName = "stringToLocalDateTime")
     ModelServiceCatalogPo dto2po(ModelServiceCatalogDto dto);
