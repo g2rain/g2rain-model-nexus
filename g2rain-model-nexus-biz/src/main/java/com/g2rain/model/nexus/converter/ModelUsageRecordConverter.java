@@ -51,6 +51,7 @@ public interface ModelUsageRecordConverter {
      * 映射关系：
      * <ul>
      *   <li>endpoint.profileId -> profileId</li>
+     *   <li>endpoint.catalogId -> catalogId</li>
      *   <li>endpoint.provider / protocol / modelName 原样带入</li>
      *   <li>usage 的 prompt / completion / total tokens 原样带入</li>
      * </ul>
@@ -66,6 +67,7 @@ public interface ModelUsageRecordConverter {
     @Mapping(target = "updateTime", ignore = true)
     @Mapping(target = "organId", ignore = true)
     @Mapping(target = "profileId", source = "endpoint.profileId")
+    @Mapping(target = "catalogId", source = "endpoint.catalogId")
     @Mapping(target = "provider", source = "endpoint.provider")
     @Mapping(target = "protocol", source = "endpoint.protocol")
     @Mapping(target = "modelName", source = "endpoint.modelName")

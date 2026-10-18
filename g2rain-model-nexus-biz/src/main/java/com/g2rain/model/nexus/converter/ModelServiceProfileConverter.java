@@ -59,6 +59,7 @@ public interface ModelServiceProfileConverter {
      * DetailPo → 内部调用端点（含 apiKey，不对外返回）
      */
     @Mapping(target = "profileId", source = "id")
+    @Mapping(target = "catalogId", source = "catalogId")
     @Mapping(target = "options.temperature", source = "temperature")
     @Mapping(target = "options.topP", source = "topP")
     @Mapping(target = "options.maxTokens", source = "maxTokens")

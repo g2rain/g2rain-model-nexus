@@ -6,6 +6,7 @@ package com.g2rain.model.nexus.protocol;
  * 携带调用上游所需的明文 {@code apiKey}；对外接口请使用 VO 的 {@code apiKeyConfigured}。
  *
  * @param profileId 配置主键
+ * @param catalogId 目录主键（用量落库必填）
  * @param protocol  协议类型
  * @param provider  供应商
  * @param baseUrl   服务地址
@@ -15,6 +16,7 @@ package com.g2rain.model.nexus.protocol;
  */
 public record ModelEndpoint(
     Long profileId,
+    Long catalogId,
     String protocol,
     String provider,
     String baseUrl,
