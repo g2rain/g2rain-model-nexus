@@ -4,9 +4,9 @@ package com.g2rain.model.nexus.protocol.openai;
 import com.g2rain.model.nexus.enums.ModelProtocol;
 import com.g2rain.model.nexus.protocol.ModelClient;
 import com.g2rain.model.nexus.protocol.ModelClientRegistry;
+import com.g2rain.model.nexus.protocol.ModelEndpoint;
 import com.g2rain.model.nexus.protocol.ModelProtocolSupport;
 import com.g2rain.model.nexus.protocol.RerankModel;
-import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
 import com.openai.client.OpenAIClient;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.ai.chat.model.ChatModel;
@@ -60,29 +60,29 @@ public class OpenAiModelClient implements ModelClient {
      * 用于兼容网关关闭 thinking；原生 OpenAI 通常忽略该扩展字段。
      * </p>
      *
-     * @param profile 已启用的模型服务明细（含目录元数据与调用参数）
+     * @param endpoint 已启用的模型接入端点（含调用参数）
      * @return 可执行 {@code call(Prompt)} 的 Spring AI ChatModel
      */
     @Override
-    public ChatModel createChatModel(ModelServiceDetailVO profile) {
+    public ChatModel createChatModel(ModelEndpoint endpoint) {
         // ---------- 1. 用接入配置组装 OpenAiChatOptions ----------
         OpenAiChatOptions options = OpenAiChatOptions.builder()
             // 服务根地址（已去尾斜杠）；兼容自建/DeepSeek 等网关
-            .baseUrl(ModelProtocolSupport.normalizeBaseUrl(profile.getBaseUrl()))
+            .baseUrl(ModelProtocolSupport.normalizeBaseUrl(endpoint.baseUrl()))
             // 鉴权密钥
-            .apiKey(profile.getApiKey())
+            .apiKey(endpoint.apiKey())
             // 实际调用的模型名（如 gpt-4o、deepseek-chat）
-            .model(profile.getModelName())
+            .model(endpoint.modelName())
             // 兼容网关：关闭 thinking；原生 OpenAI通常忽略该扩展字段
             .extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false)))
             // 采样温度；配置为 null 则不覆盖 SDK 默认
-            .temperature(ModelProtocolSupport.toDouble(profile.getTemperature()))
+            .temperature(ModelProtocolSupport.toDouble(endpoint.options().temperature()))
             // nucleus 采样 top_p；null 表示不覆盖
-            .topP(ModelProtocolSupport.toDouble(profile.getTopP()))
+            .topP(ModelProtocolSupport.toDouble(endpoint.options().topP()))
             // 单次补全最大输出 token
-            .maxTokens(profile.getMaxTokens())
+            .maxTokens(endpoint.options().maxTokens())
             // HTTP 超时；非法值由 Support 兜底 60s
-            .timeout(ModelProtocolSupport.resolveTimeout(profile.getTimeoutMs()))
+            .timeout(ModelProtocolSupport.resolveTimeout(endpoint.options().timeoutMs()))
             .build();
 
         // ---------- 2. 按 options 创建官方 OpenAI Java 同步客户端 ----------
@@ -105,7 +105,7 @@ public class OpenAiModelClient implements ModelClient {
             // 是否 GitHub Models
             options.isGitHubModels(),
             // 默认模型名（与 options.model 一致即可）
-            profile.getModelName(),
+            endpoint.modelName(),
             // 超时
             options.getTimeout(),
             // 失败重试次数
@@ -136,21 +136,21 @@ public class OpenAiModelClient implements ModelClient {
      * {@link OpenAIClient}，最终组装 {@link OpenAiEmbeddingModel}。
      * </p>
      *
-     * @param profile 已启用的模型服务明细
+     * @param endpoint 已启用的模型接入端点
      * @return 可执行 Embedding 调用的 Spring AI EmbeddingModel
      */
     @Override
-    public EmbeddingModel createEmbeddingModel(ModelServiceDetailVO profile) {
+    public EmbeddingModel createEmbeddingModel(ModelEndpoint endpoint) {
         // ---------- 1. Embedding 专用 options（无对话采样参数） ----------
         OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
             // 服务根地址
-            .baseUrl(ModelProtocolSupport.normalizeBaseUrl(profile.getBaseUrl()))
+            .baseUrl(ModelProtocolSupport.normalizeBaseUrl(endpoint.baseUrl()))
             // 鉴权密钥
-            .apiKey(profile.getApiKey())
+            .apiKey(endpoint.apiKey())
             // Embedding 模型名（如 text-embedding-3-small）
-            .model(profile.getModelName())
+            .model(endpoint.modelName())
             // HTTP 超时
-            .timeout(ModelProtocolSupport.resolveTimeout(profile.getTimeoutMs()))
+            .timeout(ModelProtocolSupport.resolveTimeout(endpoint.options().timeoutMs()))
             .build();
 
         // ---------- 2. 同样走 OpenAiSetup 创建同步客户端 ----------
@@ -163,7 +163,7 @@ public class OpenAiModelClient implements ModelClient {
             options.getDeploymentName(),
             options.isMicrosoftFoundry(),
             options.isGitHubModels(),
-            profile.getModelName(),
+            endpoint.modelName(),
             options.getTimeout(),
             options.getMaxRetries(),
             options.getProxy(),
@@ -187,18 +187,18 @@ public class OpenAiModelClient implements ModelClient {
      * 组装 {@link OpenAiRerankModel} 调用兼容网关 {@code /rerank}。
      * </p>
      *
-     * @param profile 已启用的模型服务明细
+     * @param endpoint 已启用的模型接入端点
      * @return 可执行 Rerank 调用的 {@link RerankModel}
      */
     @Override
-    public RerankModel createRerankModel(ModelServiceDetailVO profile) {
+    public RerankModel createRerankModel(ModelEndpoint endpoint) {
         return new OpenAiRerankModel(
             ModelProtocolSupport.createBearerRestClient(
-                ModelProtocolSupport.normalizeBaseUrl(profile.getBaseUrl()),
-                profile.getApiKey(),
-                ModelProtocolSupport.resolveTimeout(profile.getTimeoutMs())
+                ModelProtocolSupport.normalizeBaseUrl(endpoint.baseUrl()),
+                endpoint.apiKey(),
+                ModelProtocolSupport.resolveTimeout(endpoint.options().timeoutMs())
             ),
-            profile.getModelName()
+            endpoint.modelName()
         );
     }
 }

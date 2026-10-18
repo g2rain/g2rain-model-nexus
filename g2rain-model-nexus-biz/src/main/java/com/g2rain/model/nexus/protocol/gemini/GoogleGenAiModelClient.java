@@ -5,9 +5,9 @@ import com.g2rain.common.exception.BusinessException;
 import com.g2rain.model.nexus.enums.ModelProtocol;
 import com.g2rain.model.nexus.enums.NexusErrorCode;
 import com.g2rain.model.nexus.protocol.ModelClient;
+import com.g2rain.model.nexus.protocol.ModelEndpoint;
 import com.g2rain.model.nexus.protocol.ModelProtocolSupport;
 import com.g2rain.model.nexus.protocol.RerankModel;
-import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
 import com.google.genai.Client;
 import com.google.genai.types.HttpOptions;
 import org.springframework.ai.chat.model.ChatModel;
@@ -57,32 +57,32 @@ public class GoogleGenAiModelClient implements ModelClient {
      * {@code enable_thinking=false} 供兼容网关使用，官方 Gemini 通常忽略。
      * </p>
      *
-     * @param profile 已启用的模型服务明细（含目录元数据与调用参数）
+     * @param endpoint 已启用的模型接入端点（含调用参数）
      * @return 可执行 {@code call(Prompt)} 的 Spring AI ChatModel
      */
     @Override
-    public ChatModel createChatModel(ModelServiceDetailVO profile) {
+    public ChatModel createChatModel(ModelEndpoint endpoint) {
 
         // ---------- 1. 对话采样参数（注意 Gemini 字段名是 maxOutputTokens） ----------
         GoogleGenAiChatOptions options = GoogleGenAiChatOptions.builder()
             // 模型名，如 Gemini-2.0-flash
-            .model(profile.getModelName())
+            .model(endpoint.modelName())
             // 温度；null 不覆盖
-            .temperature(ModelProtocolSupport.toDouble(profile.getTemperature()))
+            .temperature(ModelProtocolSupport.toDouble(endpoint.options().temperature()))
             // top_p；null 不覆盖
-            .topP(ModelProtocolSupport.toDouble(profile.getTopP()))
+            .topP(ModelProtocolSupport.toDouble(endpoint.options().topP()))
             // 最大输出 token（对应配置表 maxTokens）
-            .maxOutputTokens(profile.getMaxTokens())
+            .maxOutputTokens(endpoint.options().maxTokens())
             .build();
 
         // ---------- 2. 构建 Google GenAI Client（鉴权 + HTTP 选项） ----------
         // apiKey 必填：官方 Gemini / 兼容代理均需
-        Client.Builder clientBuilder = Client.builder().apiKey(profile.getApiKey());
+        Client.Builder clientBuilder = Client.builder().apiKey(endpoint.apiKey());
         // HTTP 选项：超时用毫秒整型（与 OpenAI Duration 路径不同）
         HttpOptions.Builder httpOptions = HttpOptions.builder()
-            .timeout(ModelProtocolSupport.resolveTimeoutMs(profile.getTimeoutMs()))
+            .timeout(ModelProtocolSupport.resolveTimeoutMs(endpoint.options().timeoutMs()))
             // 若配置了自定义 baseUrl（代理/私有化），写入 HttpOptions；空白则走官方默认域名
-            .baseUrl(ModelProtocolSupport.normalizeBaseUrl(profile.getBaseUrl()))
+            .baseUrl(ModelProtocolSupport.normalizeBaseUrl(endpoint.baseUrl()))
             // 兼容网关：关闭 thinking；Gemini 通常忽略该扩展字段
             .extraBody(Map.of("chat_template_kwargs", Map.of("enable_thinking", false)));
         // 把 HTTP 选项挂到 Client
@@ -103,12 +103,12 @@ public class GoogleGenAiModelClient implements ModelClient {
      * {@link NexusErrorCode#EMBEDDING_UNSUPPORTED}，避免返回 null 导致 NPE。
      * </p>
      *
-     * @param profile 已启用的模型服务明细
+     * @param endpoint 已启用的模型接入端点
      * @return 不会正常返回；始终抛业务异常
      * @throws BusinessException 协议不支持 Embedding
      */
     @Override
-    public EmbeddingModel createEmbeddingModel(ModelServiceDetailVO profile) {
+    public EmbeddingModel createEmbeddingModel(ModelEndpoint endpoint) {
         // 尚未实现 Gemini Embedding：明确失败，避免返回 null 导致 NPE
         throw new BusinessException(
             NexusErrorCode.EMBEDDING_UNSUPPORTED,
@@ -123,12 +123,12 @@ public class GoogleGenAiModelClient implements ModelClient {
      * {@link NexusErrorCode#RERANK_UNSUPPORTED}，避免返回 null 导致 NPE。
      * </p>
      *
-     * @param profile 已启用的模型服务明细
+     * @param endpoint 已启用的模型接入端点
      * @return 不会正常返回；始终抛业务异常
      * @throws BusinessException 协议不支持 Rerank
      */
     @Override
-    public RerankModel createRerankModel(ModelServiceDetailVO profile) {
+    public RerankModel createRerankModel(ModelEndpoint endpoint) {
         throw new BusinessException(
             NexusErrorCode.RERANK_UNSUPPORTED,
             protocol().name()

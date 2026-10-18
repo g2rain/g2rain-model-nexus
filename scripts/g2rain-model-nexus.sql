@@ -79,9 +79,9 @@ CREATE TABLE `model_usage_record` (
 
 -- 本地/开发示例：先写 catalog，再写租户 organ_id=2 的 profile
 INSERT INTO `model_service_catalog` (`id`, `model_name`, `model_type`, `resource_type`, `provider`, `protocol`, `base_url`, `api_key`, `status`, `description`)
-VALUES (1, 'Qwen3.6-27B-bw', 'LLM', 'CUSTOM', '千问大语言模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问自建大语言模型'),
-       (2, '/models/Qwen3-Embedding-8B', 'VECTOR', 'CUSTOM', '千问向量模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问自建向量模型'),
-       (3, 'Qwen3.8-27B', 'RERANK', 'CUSTOM', '千问向量模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问重排序模型');
+VALUES (1, 'Qwen3.6-27B-bw', 'LLM', 'MARKET', '千问大语言模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问广场大语言模型'),
+       (2, '/models/Qwen3-Embedding-8B', 'VECTOR', 'MARKET', '千问向量模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问广场向量模型'),
+       (3, 'Qwen3.8-27B', 'RERANK', 'MARKET', '千问向量模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问广场重排序模型');
 
 INSERT INTO `model_service_profile` (`id`, `organ_id`, `catalog_id`, `temperature`, `top_p`, `max_tokens`, `timeout_ms`, `status`, `description`)
 VALUES (4, 2, 1, 0.00, 1.00, 4096, 120000, 'ACTIVE', '千问自建大语言模型'),

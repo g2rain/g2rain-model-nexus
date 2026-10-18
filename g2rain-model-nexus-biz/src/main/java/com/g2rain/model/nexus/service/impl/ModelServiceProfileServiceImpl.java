@@ -6,15 +6,23 @@ import com.g2rain.common.model.PageData;
 import com.g2rain.common.model.PageSelectListDto;
 import com.g2rain.common.utils.Asserts;
 import com.g2rain.common.utils.Moments;
+import com.g2rain.common.utils.Strings;
 import com.g2rain.common.validation.Validations;
 import com.g2rain.model.nexus.converter.ModelServiceProfileConverter;
+import com.g2rain.model.nexus.dao.ModelServiceCatalogDao;
 import com.g2rain.model.nexus.dao.ModelServiceProfileDao;
+import com.g2rain.model.nexus.dao.po.ModelServiceCatalogPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceDetailPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceProfilePo;
+import com.g2rain.model.nexus.dto.ModelServiceCatalogDto;
 import com.g2rain.model.nexus.dto.ModelServiceProfileDto;
 import com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto;
+import com.g2rain.model.nexus.dto.UpdateStatusDto;
 import com.g2rain.model.nexus.enums.ModelStatus;
 import com.g2rain.model.nexus.enums.ModelType;
+import com.g2rain.model.nexus.enums.ResourceType;
+import com.g2rain.model.nexus.protocol.ModelEndpoint;
+import com.g2rain.model.nexus.service.ModelServiceCatalogService;
 import com.g2rain.model.nexus.service.ModelServiceProfileService;
 import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
 import com.g2rain.model.nexus.vo.ModelServiceOptionVo;
@@ -24,6 +32,7 @@ import jakarta.annotation.Resource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,6 +50,12 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
     @Resource(name = "modelServiceProfileDao")
     private ModelServiceProfileDao modelServiceProfileDao;
 
+    @Resource(name = "modelServiceCatalogDao")
+    private ModelServiceCatalogDao modelServiceCatalogDao;
+
+    @Resource(name = "modelServiceCatalogServiceImpl")
+    private ModelServiceCatalogService modelServiceCatalogService;
+
     private IdGenerator idGenerator;
 
     @Qualifier("idGenerator")
@@ -54,6 +69,14 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
         return modelServiceProfileDao.selectList(selectDto)
             .stream()
             .map(ModelServiceProfileConverter.INSTANCE::po2detailVo)
+            .toList();
+    }
+
+    @Override
+    public List<ModelEndpoint> selectEndpoints(ModelServiceProfileSelectDto selectDto) {
+        return modelServiceProfileDao.selectList(selectDto)
+            .stream()
+            .map(ModelServiceProfileConverter.INSTANCE::po2endpoint)
             .toList();
     }
 
@@ -83,26 +106,50 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public Long save(ModelServiceProfileDto dto) {
         Validations.validateSave(dto);
 
-        // 转换 DTO 为 PO
-        ModelServiceProfilePo entity = ModelServiceProfileConverter.INSTANCE.dto2po(dto);
+        Long id = dto.getId();
+        boolean isUpdate = Objects.nonNull(id) && id != 0;
+        String catalogResourceType;
+        ModelServiceDetailPo existing = null;
+        if (isUpdate) {
+            existing = modelServiceProfileDao.selectById(id);
+            Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
+            dto.setCatalogId(existing.getCatalogId());
+            var catalog = modelServiceCatalogDao.selectById(existing.getCatalogId());
+            Asserts.isTrue(Objects.nonNull(catalog), SystemErrorCode.DATA_NOT_EXISTS, existing.getCatalogId());
+            catalogResourceType = catalog.getResourceType();
+            if (ResourceType.CUSTOM.name().equals(catalogResourceType)) {
+                saveCustomCatalog(dto);
+            }
+        } else if (Objects.isNull(dto.getCatalogId())) {
+            dto.setCatalogId(saveCustomCatalog(dto));
+            catalogResourceType = ResourceType.CUSTOM.name();
+        } else {
+            var catalog = modelServiceCatalogDao.selectById(dto.getCatalogId());
+            Asserts.isTrue(Objects.nonNull(catalog)
+                    && ResourceType.MARKET.name().equals(catalog.getResourceType()),
+                SystemErrorCode.DATA_NOT_EXISTS, dto.getCatalogId());
+            catalogResourceType = ResourceType.MARKET.name();
+        }
 
-        // 判断是新增还是更新
-        Long id = entity.getId();
-        if (Objects.isNull(id) || id == 0) {
-            // 新增：使用IdGenerator生成主键
+        ModelServiceProfilePo entity = ModelServiceProfileConverter.INSTANCE.dto2po(dto);
+        if (!isUpdate) {
+            Asserts.isTrue(Objects.nonNull(dto.getOrganId()), SystemErrorCode.PARAM_REQUIRED, "organId");
+            assertMarketCatalogUnique(dto.getOrganId(), dto.getCatalogId(), catalogResourceType);
             entity.setId(idGenerator.generateId());
+            entity.setStatus(ModelStatus.ACTIVE.name());
             LocalDateTime now = Moments.now();
             entity.setUpdateTime(now);
             entity.setCreateTime(now);
             int success = modelServiceProfileDao.insert(entity);
             Asserts.greaterThan(success, 0, SystemErrorCode.CREATE_DATA_ERROR);
         } else {
-            ModelServiceDetailPo existing = modelServiceProfileDao.selectById(id);
-            Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
-            // 更新：直接更新
+            // catalogId 更新不可变，MARKET 唯一性无需再查
+            entity.setCatalogId(null);
+            entity.setStatus(null);
             entity.setUpdateTime(Moments.now());
             int success = modelServiceProfileDao.update(entity);
             Asserts.greaterThan(success, 0, SystemErrorCode.UPDATE_DATA_ERROR, id);
@@ -112,9 +159,65 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public int delete(Long id) {
         ModelServiceDetailPo existing = modelServiceProfileDao.selectById(id);
         Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
-        return modelServiceProfileDao.delete(id);
+
+        int deleted = modelServiceProfileDao.delete(id);
+        if (ResourceType.CUSTOM.name().equals(existing.getResourceType())
+            && Objects.nonNull(existing.getCatalogId())) {
+            modelServiceCatalogService.delete(existing.getCatalogId(), ResourceType.CUSTOM);
+        }
+        return deleted;
+    }
+
+    @Override
+    public int updateStatus(Long id, UpdateStatusDto dto) {
+        ModelStatus.validate(dto.getStatus());
+        ModelServiceDetailPo existing = modelServiceProfileDao.selectById(id);
+        Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
+
+        ModelServiceProfilePo entity = new ModelServiceProfilePo();
+        entity.setId(id);
+        entity.setStatus(dto.getStatus());
+        entity.setUpdateTime(Moments.now());
+        int success = modelServiceProfileDao.update(entity);
+        Asserts.greaterThan(success, 0, SystemErrorCode.UPDATE_DATA_ERROR, id);
+        return success;
+    }
+
+    /**
+     * 同机构下同一 MARKET 目录只允许一份 profile（仅新增时调用）。
+     */
+    private void assertMarketCatalogUnique(Long organId, Long catalogId, String resourceType) {
+        if (!ResourceType.MARKET.name().equals(resourceType) || Objects.isNull(catalogId)) {
+            return;
+        }
+        Asserts.isTrue(Objects.nonNull(organId), SystemErrorCode.PARAM_REQUIRED, "organId");
+        Asserts.isTrue(modelServiceProfileDao.countByOrganIdAndCatalogId(organId, catalogId) == 0,
+            SystemErrorCode.DATA_EXISTS, catalogId);
+    }
+
+    private Long saveCustomCatalog(ModelServiceProfileDto dto) {
+        Asserts.isTrue(Strings.isNotBlank(dto.getModelName()), SystemErrorCode.PARAM_REQUIRED, "modelName");
+        Asserts.isTrue(Strings.isNotBlank(dto.getModelType()), SystemErrorCode.PARAM_REQUIRED, "modelType");
+        Asserts.isTrue(Strings.isNotBlank(dto.getProvider()), SystemErrorCode.PARAM_REQUIRED, "provider");
+        Asserts.isTrue(Strings.isNotBlank(dto.getProtocol()), SystemErrorCode.PARAM_REQUIRED, "protocol");
+        Asserts.isTrue(Strings.isNotBlank(dto.getBaseUrl()), SystemErrorCode.PARAM_REQUIRED, "baseUrl");
+
+        ModelServiceCatalogDto catalogDto = new ModelServiceCatalogDto();
+        catalogDto.setId(dto.getCatalogId());
+        catalogDto.setModelName(dto.getModelName());
+        catalogDto.setModelType(dto.getModelType());
+        catalogDto.setProvider(dto.getProvider());
+        catalogDto.setProtocol(dto.getProtocol());
+        catalogDto.setBaseUrl(dto.getBaseUrl());
+        catalogDto.setDescription(dto.getDescription());
+        if (Strings.isNotBlank(dto.getApiKey())) {
+            catalogDto.setApiKey(dto.getApiKey().trim());
+        }
+
+        return modelServiceCatalogService.save(catalogDto, ResourceType.CUSTOM);
     }
 }

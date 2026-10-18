@@ -16,6 +16,7 @@ import com.g2rain.model.nexus.enums.ModelStatus;
 import com.g2rain.model.nexus.enums.ModelType;
 import com.g2rain.model.nexus.protocol.ModelClient;
 import com.g2rain.model.nexus.protocol.ModelClientRegistry;
+import com.g2rain.model.nexus.protocol.ModelEndpoint;
 import com.g2rain.model.nexus.protocol.RerankCallResult;
 import com.g2rain.model.nexus.protocol.RerankModel;
 import com.g2rain.model.nexus.schema.EmbeddingData;
@@ -27,7 +28,6 @@ import com.g2rain.model.nexus.support.OpenAiChatServerConverter;
 import com.g2rain.model.nexus.support.OpenAiRerankConverter;
 import com.g2rain.model.nexus.vo.ChatCompletionResponse;
 import com.g2rain.model.nexus.vo.EmbeddingsResponse;
-import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
 import com.g2rain.model.nexus.vo.RerankResponse;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -57,7 +57,7 @@ import java.util.Objects;
  * <p>
  * 职责：
  * <ul>
- *   <li>按 model 名称解析启用中的 {@link ModelServiceDetailVO}</li>
+ *   <li>按 model 名称解析启用中的 {@link ModelEndpoint}</li>
  *   <li>通过 {@link ModelClientRegistry} 按协议获取 {@link ModelClient}</li>
  *   <li>调用 Chat / Embedding / Rerank，并转换为 OpenAI 兼容响应</li>
  *   <li>尽力写入用量记录（失败只打日志，不影响主流程）</li>
@@ -103,15 +103,15 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
     @Override
     public ChatCompletionResponse chat(ChatCompletionRequest request) {
         // 1. 按 model 找到启用中的接入配置（含 baseUrl / apiKey / protocol 等）
-        ModelServiceDetailVO profile = requireActiveProfile(
+        ModelEndpoint endpoint = requireActiveEndpoint(
             ModelType.LLM, request.getModel()
         );
 
         // 2. 按协议拿到厂商客户端，并创建可调用的 ChatModel
         ModelClient modelClient = modelClientRegistry.require(
-            profile.getProtocol()
+            endpoint.protocol()
         );
-        ChatModel chatModel = modelClient.createChatModel(profile);
+        ChatModel chatModel = modelClient.createChatModel(endpoint);
 
         try {
             // 3. OpenAI messages -> Spring AI Message 列表，再按是否带 tools 组装 Prompt
@@ -125,7 +125,7 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             ChatResponse chatResponse = chatModel.call(prompt);
 
             // 5. 记录本次 prompt/completion token 用量（失败不影响返回）
-            recordUsage(profile, chatResponse.getMetadata().getUsage());
+            recordUsage(endpoint, chatResponse.getMetadata().getUsage());
 
             // 6. Spring AI 响应 -> OpenAI chat.completion 形态 VO
             return OpenAiChatServerConverter.fromChatResponse(
@@ -136,10 +136,10 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             throw ex;
         } catch (Exception ex) {
             // 厂商 SDK / 网络等未知异常，收敛为远程服务错误
-            log.error("模型调用失败, model={}", profile.getModelName(), ex);
+            log.error("模型调用失败, model={}", endpoint.modelName(), ex);
             throw new BusinessException(
                 SystemErrorCode.REMOTE_SERVICE_ERROR,
-                profile.getProvider(),
+                endpoint.provider(),
                 ex.getMessage()
             );
         }
@@ -159,16 +159,16 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
     @Override
     public EmbeddingsResponse embed(EmbeddingsRequest request) {
         // 1. 解析启用配置并创建 EmbeddingModel（不支持 Embedding 的协议会在创建阶段抛错）
-        ModelServiceDetailVO profile = requireActiveProfile(
+        ModelEndpoint endpoint = requireActiveEndpoint(
             ModelType.VECTOR, request.getModel()
         );
 
         ModelClient modelClient = modelClientRegistry.require(
-            profile.getProtocol()
+            endpoint.protocol()
         );
 
         EmbeddingModel embeddingModel = modelClient.createEmbeddingModel(
-            profile
+            endpoint
         );
 
         try {
@@ -185,7 +185,7 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
 
             // 4. 落库用量
             Usage usage = response.getMetadata().getUsage();
-            recordUsage(profile, usage);
+            recordUsage(endpoint, usage);
 
             // 5. 将每条向量结果转为 OpenAI embeddings.data 元素
             List<EmbeddingData> data = new ArrayList<>();
@@ -212,10 +212,10 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
         } catch (BusinessException ex) {
             throw ex;
         } catch (Exception ex) {
-            log.error("Embedding 调用失败, model={}", profile.getModelName(), ex);
+            log.error("Embedding 调用失败, model={}", endpoint.modelName(), ex);
             throw new BusinessException(
                 SystemErrorCode.REMOTE_SERVICE_ERROR,
-                profile.getProvider(),
+                endpoint.provider(),
                 ex.getMessage()
             );
         }
@@ -235,48 +235,48 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
     @Override
     public RerankResponse rerank(RerankRequest request) {
         // 1. 解析启用配置并创建 RerankModel（不支持 Rerank 的协议会在创建阶段抛错）
-        ModelServiceDetailVO profile = requireActiveProfile(
+        ModelEndpoint endpoint = requireActiveEndpoint(
             ModelType.RERANK, request.getModel()
         );
 
         ModelClient modelClient = modelClientRegistry.require(
-            profile.getProtocol()
+            endpoint.protocol()
         );
 
-        RerankModel rerankModel = modelClient.createRerankModel(profile);
+        RerankModel rerankModel = modelClient.createRerankModel(endpoint);
 
         try {
             // 2. 调用重排序模型（协议层只回 results + usage）
             RerankCallResult callResult = rerankModel.call(request);
 
             // 3. 落库用量（厂商未回 usage 时为 null，recordUsage 直接跳过）
-            recordUsage(profile, callResult.usage());
+            recordUsage(endpoint, callResult.usage());
 
             // 4. 组装对外 VO；model 回显请求侧标识（路由键），与 embeddings 一致
             return OpenAiRerankConverter.toResponse(callResult, request.getModel());
         } catch (BusinessException ex) {
             throw ex;
         } catch (Exception ex) {
-            log.error("Rerank 调用失败, model={}", profile.getModelName(), ex);
+            log.error("Rerank 调用失败, model={}", endpoint.modelName(), ex);
             throw new BusinessException(
                 SystemErrorCode.REMOTE_SERVICE_ERROR,
-                profile.getProvider(),
+                endpoint.provider(),
                 ex.getMessage()
             );
         }
     }
 
     /**
-     * 按模型类型与名称查询当前租户下启用中的接入明细。
+     * 按模型类型与名称查询当前租户下启用中的接入端点。
      * <p>
      * 同时要求 profile 与 catalog 均为 {@link ModelStatus#ACTIVE}；
      * 查无结果时抛出资源不存在。
      *
      * @param modelType 模型类型（LLM / VECTOR / RERANK）
      * @param modelName 请求中的 model 标识（对应目录 model_name）
-     * @return 首条匹配的明细 VO
+     * @return 首条匹配的接入端点（含 apiKey）
      */
-    private ModelServiceDetailVO requireActiveProfile(ModelType modelType, String modelName) {
+    private ModelEndpoint requireActiveEndpoint(ModelType modelType, String modelName) {
         // 构造查询条件：精确 modelName + 仅 ACTIVE
         ModelServiceProfileSelectDto selectDto = new ModelServiceProfileSelectDto();
         if (Strings.isNotBlank(modelName)) {
@@ -287,10 +287,10 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
         selectDto.setStatus(ModelStatus.ACTIVE.name());
         selectDto.setCatalogStatus(ModelStatus.ACTIVE.name());
         //selectDto.setOrganId(PrincipalContextHolder.getOrganId());
-        List<ModelServiceDetailVO> profiles = modelServiceProfileService.selectList(selectDto);
+        List<ModelEndpoint> endpoints = modelServiceProfileService.selectEndpoints(selectDto);
         // 未配置或未启用则视为资源不存在
-        Asserts.notEmpty(profiles, SystemErrorCode.RESOURCE_NOT_FOUND, "model", modelName);
-        return profiles.getFirst();
+        Asserts.notEmpty(endpoints, SystemErrorCode.RESOURCE_NOT_FOUND, "model", modelName);
+        return endpoints.getFirst();
     }
 
     /**
@@ -376,10 +376,10 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
      * <p>
      * {@code usage} 为空时直接返回；落库异常只打 warn，不抛出，避免影响主调用结果。
      *
-     * @param profile 本次使用的接入明细
-     * @param usage   Spring AI 用量元数据，可为 null
+     * @param endpoint 本次使用的接入端点
+     * @param usage    Spring AI 用量元数据，可为 null
      */
-    private void recordUsage(ModelServiceDetailVO profile, Usage usage) {
+    private void recordUsage(ModelEndpoint endpoint, Usage usage) {
         if (Objects.isNull(usage)) {
             // 部分厂商/兼容网关可能不回 usage
             return;
@@ -389,13 +389,13 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             // 配置字段 + usage token -> 用量 DTO，再补当前租户 organId
             ModelUsageRecordConverter instance = ModelUsageRecordConverter.INSTANCE;
             ModelUsageRecordDto usageRecord = instance.fromProfileAndUsage(
-                profile, usage
+                endpoint, usage
             );
             usageRecord.setOrganId(PrincipalContextHolder.getOrganId());
             modelUsageRecordService.save(usageRecord);
         } catch (Exception ex) {
             // 用量落库失败只告警，避免拖垮主调用
-            log.warn("模型用量记录落库失败, model={}", profile.getModelName(), ex);
+            log.warn("模型用量记录落库失败, model={}", endpoint.modelName(), ex);
         }
     }
 }
