@@ -60,10 +60,10 @@ public class ModelServiceCatalogVo extends BaseVo {
     private String baseUrl;
 
     /**
-     * 访问密钥
+     * 是否已配置访问密钥（不回传明文）
      */
-    @Schema(description = "访问密钥")
-    private String apiKey;
+    @Schema(description = "是否已配置访问密钥")
+    private Boolean apiKeyConfigured;
 
     /**
      * 状态[ACTIVE:启用,INACTIVE:禁用]

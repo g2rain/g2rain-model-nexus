@@ -6,11 +6,15 @@ import com.g2rain.common.model.Result;
 import com.g2rain.model.nexus.api.ModelServiceCatalogApi;
 import com.g2rain.model.nexus.dto.ModelServiceCatalogDto;
 import com.g2rain.model.nexus.dto.ModelServiceCatalogSelectDto;
+import com.g2rain.model.nexus.dto.UpdateStatusDto;
+import com.g2rain.model.nexus.enums.ResourceType;
 import com.g2rain.model.nexus.service.ModelServiceCatalogService;
+import com.g2rain.model.nexus.utils.OwnerGuard;
 import com.g2rain.model.nexus.vo.ModelServiceCatalogVo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.annotation.Resource;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -44,14 +48,24 @@ public class ModelServiceCatalogController implements ModelServiceCatalogApi {
     }
 
     @PostMapping("/save")
-    @Operation(summary = "新增或更新模型服务目录信息", description = "新增或更新模型服务目录基础信息")
+    @Operation(summary = "新增或更新模型服务目录信息", description = "仅运营方维护 MARKET 广场目录")
     public Result<Long> save(@RequestBody ModelServiceCatalogDto dto) {
-        return Result.success(modelServiceCatalogService.save(dto));
+        OwnerGuard.requireOperator();
+        return Result.success(modelServiceCatalogService.save(dto, ResourceType.MARKET));
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "删除模型服务目录记录", description = "根据主键删除模型服务目录记录")
+    @Operation(summary = "删除模型服务目录记录", description = "仅运营方删除 MARKET 广场目录")
     public Result<Integer> delete(@Parameter(description = "模型服务目录标识") @PathVariable Long id) {
-        return Result.success(modelServiceCatalogService.delete(id));
+        OwnerGuard.requireOperator();
+        return Result.success(modelServiceCatalogService.delete(id, ResourceType.MARKET));
+    }
+
+    @PostMapping("/{id}/status")
+    @Operation(summary = "修改模型目录状态", description = "仅运营方启停 MARKET 广场目录")
+    public Result<Integer> updateStatus(@Parameter(description = "模型服务目录标识") @PathVariable Long id,
+                                        @RequestBody @Validated UpdateStatusDto dto) {
+        OwnerGuard.requireOperator();
+        return Result.success(modelServiceCatalogService.updateStatus(id, dto, ResourceType.MARKET));
     }
 }

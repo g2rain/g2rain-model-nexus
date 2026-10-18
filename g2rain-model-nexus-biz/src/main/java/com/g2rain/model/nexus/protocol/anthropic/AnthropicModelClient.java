@@ -7,9 +7,9 @@ import com.g2rain.common.exception.BusinessException;
 import com.g2rain.model.nexus.enums.ModelProtocol;
 import com.g2rain.model.nexus.enums.NexusErrorCode;
 import com.g2rain.model.nexus.protocol.ModelClient;
+import com.g2rain.model.nexus.protocol.ModelEndpoint;
 import com.g2rain.model.nexus.protocol.ModelProtocolSupport;
 import com.g2rain.model.nexus.protocol.RerankModel;
-import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
 import io.micrometer.observation.ObservationRegistry;
 import org.springframework.ai.anthropic.AnthropicChatModel;
 import org.springframework.ai.anthropic.AnthropicChatOptions;
@@ -57,29 +57,29 @@ public class AnthropicModelClient implements ModelClient {
      * 本协议无 OpenAI 风格 {@code extraBody}；关 thinking 应使用 Options 自带的 thinking API。
      * </p>
      *
-     * @param profile 已启用的模型服务明细（含目录元数据与调用参数）
+     * @param endpoint 已启用的模型接入端点（含调用参数）
      * @return 可执行 {@code call(Prompt)} 的 Spring AI ChatModel
      */
     @Override
-    public ChatModel createChatModel(ModelServiceDetailVO profile) {
+    public ChatModel createChatModel(ModelEndpoint endpoint) {
         // ---------- 1. 接入配置 -> AnthropicChatOptions ----------
         AnthropicChatOptions options = AnthropicChatOptions.builder()
             // Anthropic API 或兼容代理的根地址
-            .baseUrl(ModelProtocolSupport.normalizeBaseUrl(profile.getBaseUrl()))
+            .baseUrl(ModelProtocolSupport.normalizeBaseUrl(endpoint.baseUrl()))
             // x-api-key
-            .apiKey(profile.getApiKey())
+            .apiKey(endpoint.apiKey())
             // Anthropic SDK 要求 Model 类型，用 of(String) 包装配置中的模型名
-            .model(Model.of(profile.getModelName()))
+            .model(Model.of(endpoint.modelName()))
             // 兼容网关：关闭 thinking
             .thinkingDisabled()
             // 采样温度；null 不覆盖默认
-            .temperature(ModelProtocolSupport.toDouble(profile.getTemperature()))
+            .temperature(ModelProtocolSupport.toDouble(endpoint.options().temperature()))
             // top_p；null 不覆盖默认
-            .topP(ModelProtocolSupport.toDouble(profile.getTopP()))
+            .topP(ModelProtocolSupport.toDouble(endpoint.options().topP()))
             // 最大输出 token（Anthropic 侧必填语义较强，由配置给出）
-            .maxTokens(profile.getMaxTokens())
+            .maxTokens(endpoint.options().maxTokens())
             // 请求超时
-            .timeout(ModelProtocolSupport.resolveTimeout(profile.getTimeoutMs()))
+            .timeout(ModelProtocolSupport.resolveTimeout(endpoint.options().timeoutMs()))
             .build();
 
         // ---------- 2. 创建 Anthropic 同步 HTTP 客户端 ----------
@@ -116,12 +116,12 @@ public class AnthropicModelClient implements ModelClient {
      * {@link NexusErrorCode#EMBEDDING_UNSUPPORTED}，避免返回 null 导致 NPE。
      * </p>
      *
-     * @param profile 已启用的模型服务明细
+     * @param endpoint 已启用的模型接入端点
      * @return 不会正常返回；始终抛业务异常
      * @throws BusinessException 协议不支持 Embedding
      */
     @Override
-    public EmbeddingModel createEmbeddingModel(ModelServiceDetailVO profile) {
+    public EmbeddingModel createEmbeddingModel(ModelEndpoint endpoint) {
         // 本协议未接入 Embedding：抛业务异常，由网关返回明确错误给调用方
         // 第二个参数填入协议名，便于错误文案展示
         throw new BusinessException(
@@ -137,12 +137,12 @@ public class AnthropicModelClient implements ModelClient {
      * {@link NexusErrorCode#RERANK_UNSUPPORTED}，避免返回 null 导致 NPE。
      * </p>
      *
-     * @param profile 已启用的模型服务明细
+     * @param endpoint 已启用的模型接入端点
      * @return 不会正常返回；始终抛业务异常
      * @throws BusinessException 协议不支持 Rerank
      */
     @Override
-    public RerankModel createRerankModel(ModelServiceDetailVO profile) {
+    public RerankModel createRerankModel(ModelEndpoint endpoint) {
         throw new BusinessException(
             NexusErrorCode.RERANK_UNSUPPORTED,
             protocol().name()

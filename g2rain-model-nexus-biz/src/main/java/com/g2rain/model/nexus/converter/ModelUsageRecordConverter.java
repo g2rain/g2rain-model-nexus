@@ -3,7 +3,7 @@ package com.g2rain.model.nexus.converter;
 import com.g2rain.common.converter.CommonConverter;
 import com.g2rain.model.nexus.dao.po.ModelUsageRecordPo;
 import com.g2rain.model.nexus.dto.ModelUsageRecordDto;
-import com.g2rain.model.nexus.vo.ModelServiceDetailVO;
+import com.g2rain.model.nexus.protocol.ModelEndpoint;
 import com.g2rain.model.nexus.vo.ModelUsageRecordVo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -50,27 +50,29 @@ public interface ModelUsageRecordConverter {
      * <p>
      * 映射关系：
      * <ul>
-     *   <li>profile.id -> modelServiceId</li>
-     *   <li>profile.provider / protocol / modelName 原样带入</li>
+     *   <li>endpoint.profileId -> profileId</li>
+     *   <li>endpoint.catalogId -> catalogId</li>
+     *   <li>endpoint.provider / protocol / modelName 原样带入</li>
      *   <li>usage 的 prompt / completion / total tokens 原样带入</li>
      * </ul>
      * 忽略 id、时间戳与 organId：id/时间由保存流程生成，organId 由调用方从
      * {@code PrincipalContextHolder} 写入，避免 Converter 隐式依赖 Web 上下文。
      *
-     * @param profile 本次调用使用的模型接入配置
-     * @param usage   Spring AI 返回的用量信息
+     * @param endpoint 本次调用使用的模型接入端点
+     * @param usage    Spring AI 返回的用量信息
      * @return 用量记录 DTO（尚未持久化）
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createTime", ignore = true)
     @Mapping(target = "updateTime", ignore = true)
     @Mapping(target = "organId", ignore = true)
-    @Mapping(target = "profileId", source = "profile.id")
-    @Mapping(target = "provider", source = "profile.provider")
-    @Mapping(target = "protocol", source = "profile.protocol")
-    @Mapping(target = "modelName", source = "profile.modelName")
+    @Mapping(target = "profileId", source = "endpoint.profileId")
+    @Mapping(target = "catalogId", source = "endpoint.catalogId")
+    @Mapping(target = "provider", source = "endpoint.provider")
+    @Mapping(target = "protocol", source = "endpoint.protocol")
+    @Mapping(target = "modelName", source = "endpoint.modelName")
     @Mapping(target = "promptTokens", source = "usage.promptTokens")
     @Mapping(target = "completionTokens", source = "usage.completionTokens")
     @Mapping(target = "totalTokens", source = "usage.totalTokens")
-    ModelUsageRecordDto fromProfileAndUsage(ModelServiceDetailVO profile, Usage usage);
+    ModelUsageRecordDto fromProfileAndUsage(ModelEndpoint endpoint, Usage usage);
 }

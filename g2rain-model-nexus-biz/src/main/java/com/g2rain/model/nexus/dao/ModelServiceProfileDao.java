@@ -6,6 +6,7 @@ import com.g2rain.model.nexus.dao.po.ModelServiceDetailPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceProfilePo;
 import com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto;
 import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
@@ -118,4 +119,31 @@ public interface ModelServiceProfileDao {
      * @return 短字段明细列表
      */
     List<ModelServiceDetailPo> selectOptionsList(ModelServiceProfileSelectDto selectDto);
+
+    /**
+     * 按 catalogId 统计有效配置数（忽略机构隔离）。
+     *
+     * @param catalogId 模型目录 ID
+     * @return 引用该目录的 profile 数量
+     */
+    @IgnoreIsolation
+    int countByCatalogIdWithoutIsolation(@Param("catalogId") Long catalogId);
+
+    /**
+     * 按 catalogId 统计有效配置数（本机构隔离）。
+     *
+     * @param catalogId 模型目录 ID
+     * @return 当前机构引用该目录的 profile 数量
+     */
+    int countByCatalogId(@Param("catalogId") Long catalogId);
+
+    /**
+     * 同机构下同一 catalog 的有效配置数（显式 organId，用于 MARKET 唯一性）。
+     *
+     * @param organId   机构标识
+     * @param catalogId 模型目录 ID
+     * @return 数量
+     */
+    @IgnoreIsolation
+    int countByOrganIdAndCatalogId(@Param("organId") Long organId, @Param("catalogId") Long catalogId);
 }

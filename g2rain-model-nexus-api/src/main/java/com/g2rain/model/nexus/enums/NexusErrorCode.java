@@ -34,7 +34,13 @@ public enum NexusErrorCode implements ErrorCode {
     PARAM_INVALID("model_nexus.40006", "参数无效：{0:param}"),
 
     @Schema(description = "协议不支持 Rerank")
-    RERANK_UNSUPPORTED("model_nexus.40007", "协议 [{0:protocol}] 不支持 Rerank");
+    RERANK_UNSUPPORTED("model_nexus.40007", "协议 [{0:protocol}] 不支持 Rerank"),
+
+    @Schema(description = "模型目录仍被配置引用，不可删除")
+    CATALOG_IN_USE("model_nexus.40008", "模型目录仍被模型配置引用，不可删除：{0:catalogId}"),
+
+    @Schema(description = "非运营公司不可删除模型广场目录")
+    CATALOG_MARKET_DELETE_DENIED("model_nexus.40009", "非运营公司不可删除模型广场目录");
 
     private final String code;
 
