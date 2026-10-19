@@ -1,6 +1,7 @@
 package com.g2rain.model.nexus.dto;
 
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -49,6 +50,14 @@ public class EmbeddingsRequest {
      */
     @Schema(description = "可选维度覆盖（部分厂商支持）")
     private Integer dimensions;
+
+    /**
+     * 向量编码格式，仅 {@code float} 或 {@code base64}。
+     * 缺省时由服务端按 {@code base64} 调用上游。
+     */
+    @JsonAlias("encoding_format")
+    @Schema(description = "向量编码格式，float 或 base64；缺省为 base64")
+    private String encodingFormat;
 
     /**
      * Bean Validation：归一后的 input 不得为空。

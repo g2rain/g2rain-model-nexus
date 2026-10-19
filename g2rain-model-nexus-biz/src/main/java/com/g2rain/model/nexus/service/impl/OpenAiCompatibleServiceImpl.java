@@ -172,10 +172,10 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
         );
 
         try {
-            // 2. 归一化 input（兼容 string / string[]），并按需附加 dimensions
+            // 2. 归一化 input（兼容 string / string[]），并按需附加 dimensions 与 encodingFormat
             List<String> inputs = request.resolveInputs();
             EmbeddingRequest embeddingRequest = buildRequest(
-                inputs, request.getDimensions(), embeddingModel
+                inputs, request.getDimensions(), request.getEncodingFormat(), embeddingModel
             );
 
             // 3. 调用向量模型
@@ -329,25 +329,46 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
     /**
      * 组装 Spring AI {@link EmbeddingRequest}。
      * <p>
-     * 仅当指定了正数 dimensions 且实现为 {@link OpenAiEmbeddingModel} 时，
-     * 在默认 options 上覆盖维度；否则不附加自定义 options。
+     * 仅 {@link OpenAiEmbeddingModel} 会附加自定义 options：正数 dimensions 时覆盖维度，
+     * 并写入编码格式。编码格式缺省为 {@code base64}。其它实现不附加自定义 options。
      *
-     * @param inputs         已归一的文本列表
-     * @param dimensions     可选维度覆盖
-     * @param embeddingModel 当前 Embedding 客户端
+     * @param inputs          已归一的文本列表
+     * @param dimensions      可选维度覆盖
+     * @param encodingFormat  可选编码格式，{@code float} 或 {@code base64}
+     * @param embeddingModel  当前 Embedding 客户端
      * @return EmbeddingRequest
      */
-    private static EmbeddingRequest buildRequest(List<String> inputs, Integer dimensions, EmbeddingModel embeddingModel) {
-        // 未指定维度，或非 OpenAI Embedding 实现：不附加自定义 options
-        if (Objects.isNull(dimensions) || dimensions <= 0 || !(embeddingModel instanceof OpenAiEmbeddingModel openAi)) {
+    private static EmbeddingRequest buildRequest(List<String> inputs, Integer dimensions, String encodingFormat, EmbeddingModel embeddingModel) {
+        if (!(embeddingModel instanceof OpenAiEmbeddingModel openAi)) {
             return new EmbeddingRequest(inputs, null);
         }
 
-        // 基于模型默认 options 复制一份，再覆盖 dimensions
         OpenAiEmbeddingOptions.Builder builder = OpenAiEmbeddingOptions.builder();
         builder.from(openAi.getOptions());
-        builder.dimensions(dimensions);
+        if (Objects.nonNull(dimensions) && dimensions > 0) {
+            builder.dimensions(dimensions);
+        }
+        builder.encodingFormat(resolveEncodingFormat(encodingFormat));
         return new EmbeddingRequest(inputs, builder.build());
+    }
+
+    /**
+     * 将请求中的编码格式解析为 Spring AI 枚举。空白视为缺省 {@code base64}。
+     *
+     * @param encodingFormat 请求字段，可为 null
+     * @return float 或 base64
+     */
+    static OpenAiEmbeddingOptions.EncodingFormat resolveEncodingFormat(String encodingFormat) {
+        if (Strings.isBlank(encodingFormat)) {
+            return OpenAiEmbeddingOptions.EncodingFormat.BASE64;
+        }
+        if ("float".equalsIgnoreCase(encodingFormat.trim())) {
+            return OpenAiEmbeddingOptions.EncodingFormat.FLOAT;
+        }
+        if ("base64".equalsIgnoreCase(encodingFormat.trim())) {
+            return OpenAiEmbeddingOptions.EncodingFormat.BASE64;
+        }
+        throw new BusinessException(SystemErrorCode.PARAM_VAL_INVALID, "encodingFormat");
     }
 
     /**
