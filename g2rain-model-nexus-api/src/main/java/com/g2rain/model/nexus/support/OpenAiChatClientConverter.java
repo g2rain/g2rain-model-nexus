@@ -1,5 +1,7 @@
 package com.g2rain.model.nexus.support;
 
+
+import lombok.extern.slf4j.Slf4j;
 import com.g2rain.common.json.JsonCodec;
 import com.g2rain.common.json.JsonCodecFactory;
 import com.g2rain.common.utils.Collections;
@@ -34,6 +36,7 @@ import java.util.Objects;
  * @author alpha
  * @since 2026/8/1
  */
+@Slf4j
 public final class OpenAiChatClientConverter {
 
     /**
@@ -242,6 +245,7 @@ public final class OpenAiChatClientConverter {
             // 正常路径：解析为 JsonNode，后续序列化进 OpenAI 请求
             return JSON.str2obj(inputSchema, JsonNode.class);
         } catch (RuntimeException ex) {
+            log.error("failed to parse schema", ex);
             // 非法 JSON：原样回传字符串，不因单条 schema 坏掉整次转换
             return inputSchema;
         }
