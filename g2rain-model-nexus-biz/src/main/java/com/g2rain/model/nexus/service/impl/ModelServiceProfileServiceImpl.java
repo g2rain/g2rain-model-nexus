@@ -11,7 +11,6 @@ import com.g2rain.common.validation.Validations;
 import com.g2rain.model.nexus.converter.ModelServiceProfileConverter;
 import com.g2rain.model.nexus.dao.ModelServiceCatalogDao;
 import com.g2rain.model.nexus.dao.ModelServiceProfileDao;
-import com.g2rain.model.nexus.dao.po.ModelServiceCatalogPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceDetailPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceProfilePo;
 import com.g2rain.model.nexus.dto.ModelServiceCatalogDto;
