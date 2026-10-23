@@ -19,6 +19,7 @@ import com.g2rain.model.nexus.protocol.ModelClientRegistry;
 import com.g2rain.model.nexus.protocol.ModelEndpoint;
 import com.g2rain.model.nexus.protocol.RerankCallResult;
 import com.g2rain.model.nexus.protocol.RerankModel;
+import com.g2rain.model.nexus.protocol.UpstreamException;
 import com.g2rain.model.nexus.schema.EmbeddingData;
 import com.g2rain.model.nexus.schema.EmbeddingUsage;
 import com.g2rain.model.nexus.service.ModelServiceProfileService;
@@ -135,13 +136,8 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             // 已知业务异常（如协议不支持）直接向上抛
             throw ex;
         } catch (Exception ex) {
-            // 厂商 SDK / 网络等未知异常，收敛为远程服务错误
             log.error("模型调用失败, model={}", endpoint.modelName(), ex);
-            throw new BusinessException(
-                SystemErrorCode.REMOTE_SERVICE_ERROR,
-                endpoint.provider(),
-                ex.getMessage()
-            );
+            throw remoteFailure(endpoint, ex);
         }
     }
 
@@ -213,11 +209,7 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             throw ex;
         } catch (Exception ex) {
             log.error("Embedding 调用失败, model={}", endpoint.modelName(), ex);
-            throw new BusinessException(
-                SystemErrorCode.REMOTE_SERVICE_ERROR,
-                endpoint.provider(),
-                ex.getMessage()
-            );
+            throw remoteFailure(endpoint, ex);
         }
     }
 
@@ -258,12 +250,23 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             throw ex;
         } catch (Exception ex) {
             log.error("Rerank 调用失败, model={}", endpoint.modelName(), ex);
-            throw new BusinessException(
-                SystemErrorCode.REMOTE_SERVICE_ERROR,
-                endpoint.provider(),
-                ex.getMessage()
-            );
+            throw remoteFailure(endpoint, ex);
         }
+    }
+
+    /**
+     * 厂商调用失败：能识别上游状态码与错误码的原样透传，其余收敛为远程服务错误。
+     *
+     * @param endpoint 本次接入端点
+     * @param ex       调用异常
+     * @return 待抛出的异常
+     */
+    private static RuntimeException remoteFailure(ModelEndpoint endpoint, Exception ex) {
+        UpstreamException upstream = UpstreamException.of(ex, endpoint.provider());
+        if (Objects.nonNull(upstream)) {
+            return upstream;
+        }
+        return new BusinessException(SystemErrorCode.REMOTE_SERVICE_ERROR, endpoint.provider(), ex.getMessage());
     }
 
     /**
