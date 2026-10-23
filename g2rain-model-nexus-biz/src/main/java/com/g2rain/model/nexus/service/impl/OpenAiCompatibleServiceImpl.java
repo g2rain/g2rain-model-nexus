@@ -290,6 +290,11 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
         List<ModelEndpoint> endpoints = modelServiceProfileService.selectEndpoints(selectDto);
         // 未配置或未启用则视为资源不存在
         Asserts.notEmpty(endpoints, SystemErrorCode.RESOURCE_NOT_FOUND, "model", modelName);
+        if (Strings.isNotBlank(modelName)) {
+            return endpoints.getFirst();
+        }
+
+        // 未指定模型：优先默认配置，没有默认则取第一条
         return endpoints.stream()
             .filter(ModelEndpoint::defaultFlag)
             .findFirst()
