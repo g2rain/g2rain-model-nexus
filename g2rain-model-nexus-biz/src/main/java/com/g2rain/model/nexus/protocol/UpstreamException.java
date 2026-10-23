@@ -4,7 +4,9 @@ import com.anthropic.errors.AnthropicServiceException;
 import com.g2rain.common.json.JsonCodec;
 import com.g2rain.common.json.JsonCodecFactory;
 import com.g2rain.common.utils.Strings;
+import com.g2rain.model.nexus.protocol.openai.UpstreamTrace;
 import com.google.genai.errors.ApiException;
+import com.openai.errors.OpenAIInvalidDataException;
 import com.openai.errors.OpenAIServiceException;
 import lombok.Getter;
 import org.jspecify.annotations.Nullable;
@@ -21,7 +23,7 @@ import java.util.regex.Pattern;
  * 上游厂商返回的错误：保留原始 HTTP 状态码、厂商错误码与（脱敏后的）原文。
  *
  * <p>由 {@link #of(Throwable, String)} 沿异常链识别 OpenAI / Anthropic / Gemini SDK、
- * RestClient（Rerank）与超时异常；识别不了的仍按平台 {@code REMOTE_SERVICE_ERROR} 处理。</p>
+ * RestClient（Rerank）、上游响应体不合规与超时异常；识别不了的仍按平台 {@code REMOTE_SERVICE_ERROR} 处理。</p>
  */
 @Getter
 public class UpstreamException extends RuntimeException {
@@ -32,6 +34,13 @@ public class UpstreamException extends RuntimeException {
     private static final int TIMEOUT_STATUS = 504;
 
     private static final String TIMEOUT_CODE = "timeout";
+
+    /**
+     * 响应体不合规统一返回的状态码与错误码。
+     */
+    private static final int INVALID_STATUS = 502;
+
+    private static final String INVALID_CODE = "invalid_response";
 
     /**
      * 原文最大长度。
@@ -106,6 +115,12 @@ public class UpstreamException extends RuntimeException {
                     Map<?, ?> body = bodyOf(() -> JSON.str2map(e.getResponseBodyAsString()));
                     String code = Objects.toString(nested(body, "code"), null);
                     return new UpstreamException(e.getStatusCode().value(), code, messageOf(body, e), provider, ex);
+                }
+                case OpenAIInvalidDataException e -> {
+                    // 上游 200 但响应体不符合协议（如缺 choices）：附带原始响应便于排查
+                    String raw = Objects.requireNonNullElse(UpstreamTrace.take(), "");
+                    return new UpstreamException(INVALID_STATUS, INVALID_CODE,
+                        clean(e.getMessage() + "；原始响应：" + raw), provider, ex);
                 }
                 case SocketTimeoutException _, HttpTimeoutException _ -> {
                     return new UpstreamException(TIMEOUT_STATUS, TIMEOUT_CODE, clean(t.getMessage()), provider, ex);

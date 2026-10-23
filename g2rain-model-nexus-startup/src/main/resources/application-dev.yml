@@ -28,3 +28,5 @@ spring:
 logging:
   level:
     com.g2rain.model.nexus.dao: debug
+    # 上游报文轨迹：打印实际发给模型的请求体与原始响应
+    com.g2rain.model.nexus.protocol.openai.UpstreamTrace: debug
