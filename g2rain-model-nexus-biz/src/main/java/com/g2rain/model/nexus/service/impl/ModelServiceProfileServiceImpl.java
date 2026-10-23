@@ -120,6 +120,7 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
             existing = modelServiceProfileDao.selectById(id);
             Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
             dto.setCatalogId(existing.getCatalogId());
+            modelType = existing.getModelType();
             var catalog = modelServiceCatalogDao.selectById(existing.getCatalogId());
             Asserts.isTrue(Objects.nonNull(catalog), SystemErrorCode.DATA_NOT_EXISTS, existing.getCatalogId());
             catalogResourceType = catalog.getResourceType();
@@ -140,12 +141,16 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
 
         ModelServiceProfilePo entity = ModelServiceProfileConverter.INSTANCE.dto2po(dto);
         entity.setDisplayName(Strings.blankToNull(Strings.trim(dto.getDisplayName())));
+        // 仅大模型可在对话中选择，向量 / 重排序固定为否
+        if (!ModelType.LLM.name().equals(modelType)) {
+            entity.setSelectable(Boolean.FALSE);
+        }
         if (!isUpdate) {
             Asserts.isTrue(Objects.nonNull(dto.getOrganId()), SystemErrorCode.PARAM_REQUIRED, "organId");
             assertMarketCatalogUnique(dto.getOrganId(), dto.getCatalogId(), catalogResourceType);
             entity.setId(idGenerator.generateId());
             entity.setStatus(ModelStatus.ACTIVE.name());
-            entity.setSelectable(Objects.requireNonNullElse(dto.getSelectable(), Boolean.TRUE));
+            entity.setSelectable(Objects.requireNonNullElse(entity.getSelectable(), Boolean.TRUE));
             entity.setModelType(modelType);
             // 同机构同类型的第一条配置自动成为默认
             entity.setDefaultFlag(modelServiceProfileDao.countDefault(dto.getOrganId(), modelType) == 0);
