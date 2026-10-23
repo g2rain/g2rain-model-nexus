@@ -36,7 +36,7 @@ public interface ModelServiceProfileService {
     List<ModelEndpoint> selectEndpoints(ModelServiceProfileSelectDto selectDto);
 
     /**
-     * 查询 ACTIVE 模型下拉选项（仅 id + modelName）。
+     * 查询对话可选的 ACTIVE 大模型下拉选项（id + modelName + displayName）。
      *
      * @return ACTIVE 模型选项列表
      */
@@ -74,4 +74,12 @@ public interface ModelServiceProfileService {
      * @return 影响行数
      */
     int updateStatus(Long id, UpdateStatusDto dto);
+
+    /**
+     * 设为默认：同机构同类型只保留这一条默认
+     *
+     * @param id 主键 ID
+     * @return 影响行数（已是默认返回 0）
+     */
+    int updateDefault(Long id);
 }

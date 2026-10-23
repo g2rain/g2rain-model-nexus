@@ -78,10 +78,12 @@ public interface ModelServiceProfileConverter {
      * 忽略 deleteFlag 字段
      */
     @BeanMapping(ignoreUnmappedSourceProperties = {
-        "modelName", "modelType", "provider", "protocol", "baseUrl", "apiKey"
+        "modelName", "provider", "protocol", "baseUrl", "apiKey"
     })
     @Mapping(target = "version", ignore = true)
     @Mapping(target = "deleteFlag", ignore = true)
+    @Mapping(target = "modelType", ignore = true)
+    @Mapping(target = "defaultFlag", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "createTime", source = "createTime", qualifiedByName = "stringToLocalDateTime")
     @Mapping(target = "updateTime", source = "updateTime", qualifiedByName = "stringToLocalDateTime")

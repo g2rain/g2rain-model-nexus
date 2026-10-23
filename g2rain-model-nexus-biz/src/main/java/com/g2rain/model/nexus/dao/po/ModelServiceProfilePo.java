@@ -32,6 +32,26 @@ public class ModelServiceProfilePo extends BasePo {
     private Long catalogId;
 
     /**
+     * 模型类型（取自目录，新增后不可变）
+     */
+    private String modelType;
+
+    /**
+     * 展示名称
+     */
+    private String displayName;
+
+    /**
+     * 对话可选
+     */
+    private Boolean selectable;
+
+    /**
+     * 默认标识（同机构同类型唯一）
+     */
+    private Boolean defaultFlag;
+
+    /**
      * 采样温度
      */
     private BigDecimal temperature;

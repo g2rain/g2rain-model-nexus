@@ -32,6 +32,21 @@ public class ModelServiceDetailPo extends BasePo {
     private Long catalogId;
 
     /**
+     * 展示名称
+     */
+    private String displayName;
+
+    /**
+     * 对话可选
+     */
+    private Boolean selectable;
+
+    /**
+     * 默认标识（同机构同类型唯一）
+     */
+    private Boolean defaultFlag;
+
+    /**
      * 模型调用标识
      */
     private String modelName;

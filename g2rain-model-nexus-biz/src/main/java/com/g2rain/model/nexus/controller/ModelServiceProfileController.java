@@ -73,4 +73,10 @@ public class ModelServiceProfileController implements ModelServiceProfileApi {
     public Result<Integer> updateStatus(@Parameter(description = "模型服务配置标识") @PathVariable Long id, @RequestBody @Validated UpdateStatusDto dto) {
         return Result.success(modelServiceProfileService.updateStatus(id, dto));
     }
+
+    @PostMapping("/{id}/default")
+    @Operation(summary = "设为默认模型配置", description = "同机构同类型只保留一条默认")
+    public Result<Integer> updateDefault(@Parameter(description = "模型服务配置标识") @PathVariable Long id) {
+        return Result.success(modelServiceProfileService.updateDefault(id));
+    }
 }
