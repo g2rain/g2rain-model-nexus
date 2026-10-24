@@ -15,6 +15,7 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
+import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomizer;
 import org.springframework.ai.openai.setup.OpenAiSetup;
 import org.springframework.stereotype.Component;
 
@@ -35,6 +36,11 @@ import java.util.Map;
  */
 @Component
 public class OpenAiModelClient implements ModelClient {
+
+    /**
+     * 给官方 SDK 的 OkHttp 客户端挂上报文轨迹拦截器。
+     */
+    private static final OpenAiHttpClientBuilderCustomizer TRACE = builder -> builder.interceptor(UpstreamTrace.INSTANCE);
 
     /**
      * 返回本实现所对接的协议枚举。
@@ -116,10 +122,10 @@ public class OpenAiModelClient implements ModelClient {
             options.getCustomHeaders(),
             // 不做 Micrometer 观测
             ObservationRegistry.NOOP,
-            // 无额外 RestClient 定制
+            // 不采集 Micrometer 指标
             null,
-            // 无额外拦截器
-            List.of()
+            // 报文轨迹：DEBUG 打印上游请求与响应，响应体不合规时附带原文
+            List.of(TRACE)
         );
 
         // ---------- 3. 包装为 Spring AI ChatModel，供网关 call(Prompt) ----------
@@ -170,7 +176,7 @@ public class OpenAiModelClient implements ModelClient {
             options.getCustomHeaders(),
             ObservationRegistry.NOOP,
             null,
-            List.of()
+            List.of(TRACE)
         );
 
         // ---------- 3. 包装为 Spring AI EmbeddingModel ----------

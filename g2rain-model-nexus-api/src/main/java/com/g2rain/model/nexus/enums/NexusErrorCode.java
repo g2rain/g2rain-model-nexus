@@ -40,7 +40,10 @@ public enum NexusErrorCode implements ErrorCode {
     CATALOG_IN_USE("model_nexus.40008", "模型目录仍被模型配置引用，不可删除：{0:catalogId}"),
 
     @Schema(description = "非运营公司不可删除模型广场目录")
-    CATALOG_MARKET_DELETE_DENIED("model_nexus.40009", "非运营公司不可删除模型广场目录");
+    CATALOG_MARKET_DELETE_DENIED("model_nexus.40009", "非运营公司不可删除模型广场目录"),
+
+    @Schema(description = "默认模型配置不可删除或禁用")
+    DEFAULT_PROFILE_LOCKED("model_nexus.40010", "默认模型配置不可删除或禁用，请先切换默认：{0:id}");
 
     private final String code;
 

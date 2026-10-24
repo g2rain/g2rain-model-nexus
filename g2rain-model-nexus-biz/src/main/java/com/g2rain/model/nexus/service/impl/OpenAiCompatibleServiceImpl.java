@@ -19,6 +19,7 @@ import com.g2rain.model.nexus.protocol.ModelClientRegistry;
 import com.g2rain.model.nexus.protocol.ModelEndpoint;
 import com.g2rain.model.nexus.protocol.RerankCallResult;
 import com.g2rain.model.nexus.protocol.RerankModel;
+import com.g2rain.model.nexus.protocol.UpstreamException;
 import com.g2rain.model.nexus.schema.EmbeddingData;
 import com.g2rain.model.nexus.schema.EmbeddingUsage;
 import com.g2rain.model.nexus.service.ModelServiceProfileService;
@@ -135,13 +136,8 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             // 已知业务异常（如协议不支持）直接向上抛
             throw ex;
         } catch (Exception ex) {
-            // 厂商 SDK / 网络等未知异常，收敛为远程服务错误
             log.error("模型调用失败, model={}", endpoint.modelName(), ex);
-            throw new BusinessException(
-                SystemErrorCode.REMOTE_SERVICE_ERROR,
-                endpoint.provider(),
-                ex.getMessage()
-            );
+            throw remoteFailure(endpoint, ex);
         }
     }
 
@@ -213,11 +209,7 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             throw ex;
         } catch (Exception ex) {
             log.error("Embedding 调用失败, model={}", endpoint.modelName(), ex);
-            throw new BusinessException(
-                SystemErrorCode.REMOTE_SERVICE_ERROR,
-                endpoint.provider(),
-                ex.getMessage()
-            );
+            throw remoteFailure(endpoint, ex);
         }
     }
 
@@ -258,23 +250,34 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
             throw ex;
         } catch (Exception ex) {
             log.error("Rerank 调用失败, model={}", endpoint.modelName(), ex);
-            throw new BusinessException(
-                SystemErrorCode.REMOTE_SERVICE_ERROR,
-                endpoint.provider(),
-                ex.getMessage()
-            );
+            throw remoteFailure(endpoint, ex);
         }
+    }
+
+    /**
+     * 厂商调用失败：能识别上游状态码与错误码的原样透传，其余收敛为远程服务错误。
+     *
+     * @param endpoint 本次接入端点
+     * @param ex       调用异常
+     * @return 待抛出的异常
+     */
+    private static RuntimeException remoteFailure(ModelEndpoint endpoint, Exception ex) {
+        UpstreamException upstream = UpstreamException.of(ex, endpoint.provider());
+        if (Objects.nonNull(upstream)) {
+            return upstream;
+        }
+        return new BusinessException(SystemErrorCode.REMOTE_SERVICE_ERROR, endpoint.provider(), ex.getMessage());
     }
 
     /**
      * 按模型类型与名称查询当前租户下启用中的接入端点。
      * <p>
-     * 同时要求 profile 与 catalog 均为 {@link ModelStatus#ACTIVE}；
+     * 同时要求 profile 与 catalog 均为 {@link ModelStatus#ACTIVE}；未指定模型名时优先默认配置，否则取第一条；
      * 查无结果时抛出资源不存在。
      *
      * @param modelType 模型类型（LLM / VECTOR / RERANK）
-     * @param modelName 请求中的 model 标识（对应目录 model_name）
-     * @return 首条匹配的接入端点（含 apiKey）
+     * @param modelName 请求中的 model 标识（对应目录 model_name），为空时不限定
+     * @return 默认或首条匹配的接入端点（含 apiKey）
      */
     private ModelEndpoint requireActiveEndpoint(ModelType modelType, String modelName) {
         // 构造查询条件：精确 modelName + 仅 ACTIVE
@@ -286,11 +289,19 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
         selectDto.setModelType(modelType.name());
         selectDto.setStatus(ModelStatus.ACTIVE.name());
         selectDto.setCatalogStatus(ModelStatus.ACTIVE.name());
-        //selectDto.setOrganId(PrincipalContextHolder.getOrganId());
+        selectDto.setOrganId(PrincipalContextHolder.getOrganId());
         List<ModelEndpoint> endpoints = modelServiceProfileService.selectEndpoints(selectDto);
         // 未配置或未启用则视为资源不存在
         Asserts.notEmpty(endpoints, SystemErrorCode.RESOURCE_NOT_FOUND, "model", modelName);
-        return endpoints.getFirst();
+        if (Strings.isNotBlank(modelName)) {
+            return endpoints.getFirst();
+        }
+
+        // 未指定模型：优先默认配置，没有默认则取第一条
+        return endpoints.stream()
+            .filter(ModelEndpoint::defaultFlag)
+            .findFirst()
+            .orElse(endpoints.getFirst());
     }
 
     /**
@@ -332,10 +343,10 @@ public class OpenAiCompatibleServiceImpl implements OpenAiCompatibleService {
      * 仅 {@link OpenAiEmbeddingModel} 会附加自定义 options：正数 dimensions 时覆盖维度，
      * 并写入编码格式。编码格式缺省为 {@code base64}。其它实现不附加自定义 options。
      *
-     * @param inputs          已归一的文本列表
-     * @param dimensions      可选维度覆盖
-     * @param encodingFormat  可选编码格式，{@code float} 或 {@code base64}
-     * @param embeddingModel  当前 Embedding 客户端
+     * @param inputs         已归一的文本列表
+     * @param dimensions     可选维度覆盖
+     * @param encodingFormat 可选编码格式，{@code float} 或 {@code base64}
+     * @param embeddingModel 当前 Embedding 客户端
      * @return EmbeddingRequest
      */
     private static EmbeddingRequest buildRequest(List<String> inputs, Integer dimensions, String encodingFormat, EmbeddingModel embeddingModel) {
