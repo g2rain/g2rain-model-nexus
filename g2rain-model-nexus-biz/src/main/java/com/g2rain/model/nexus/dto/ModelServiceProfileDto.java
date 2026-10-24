@@ -3,6 +3,7 @@ package com.g2rain.model.nexus.dto;
 import com.g2rain.common.model.BaseDto;
 import com.g2rain.common.validation.CreateGroup;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.EqualsAndHashCode;
@@ -37,6 +38,20 @@ public class ModelServiceProfileDto extends BaseDto {
      */
     @Schema(description = "模型服务目录标识")
     private Long catalogId;
+
+    /**
+     * 展示名称
+     */
+    @NotBlank(groups = CreateGroup.class)
+    @Size(max = 64)
+    @Schema(description = "展示名称")
+    private String displayName;
+
+    /**
+     * 对话可选（新增缺省为是）
+     */
+    @Schema(description = "对话可选")
+    private Boolean selectable;
 
     /**
      * 私有接入：模型名称（有值则走 CUSTOM 聚合保存）

@@ -36,6 +36,18 @@ public class ModelServiceProfileSelectDto extends BaseSelectListDto {
     private Long catalogId;
 
     /**
+     * 对话可选
+     */
+    @Schema(description = "对话可选")
+    private Boolean selectable;
+
+    /**
+     * 默认标识
+     */
+    @Schema(description = "默认标识")
+    private Boolean defaultFlag;
+
+    /**
      * 模型调用标识
      */
     @Schema(description = "模型调用标识")

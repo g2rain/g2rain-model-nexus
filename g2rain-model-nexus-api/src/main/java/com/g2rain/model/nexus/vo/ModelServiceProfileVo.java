@@ -38,6 +38,24 @@ public class ModelServiceProfileVo extends BaseVo {
     private Long catalogId;
 
     /**
+     * 展示名称
+     */
+    @Schema(description = "展示名称")
+    private String displayName;
+
+    /**
+     * 对话可选
+     */
+    @Schema(description = "对话可选")
+    private Boolean selectable;
+
+    /**
+     * 默认标识（同机构同类型唯一）
+     */
+    @Schema(description = "默认标识")
+    private Boolean defaultFlag;
+
+    /**
      * 采样温度
      */
     @Schema(description = "采样温度")

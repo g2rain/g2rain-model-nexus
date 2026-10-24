@@ -4,7 +4,9 @@ import com.g2rain.common.exception.BusinessException;
 import com.g2rain.common.exception.ExceptionConverter;
 import com.g2rain.common.exception.FieldError;
 import com.g2rain.common.exception.SystemErrorCode;
+import com.g2rain.common.utils.Strings;
 import com.g2rain.model.nexus.api.OpenAiCompatibleApi;
+import com.g2rain.model.nexus.protocol.UpstreamException;
 import com.g2rain.model.nexus.vo.OpenAiErrorResponseVo;
 import com.g2rain.web.exception.ConstraintFormatter;
 import jakarta.validation.ConstraintViolationException;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -41,6 +44,24 @@ public class OpenAiExceptionAdvice {
     public ResponseEntity<@NonNull OpenAiErrorResponseVo> handle(BusinessException ex) {
         log.error("OpenAI 协议业务异常: {}", ex.getMessage(), ex);
         return openAiErrorAssembler.toResponseEntity(ex);
+    }
+
+    /**
+     * 上游厂商错误：原样返回上游状态码与厂商错误码，原文已脱敏。
+     *
+     * @param ex 上游错误
+     * @return OpenAI 协议错误响应
+     */
+    @ExceptionHandler(UpstreamException.class)
+    public ResponseEntity<@NonNull OpenAiErrorResponseVo> handle(UpstreamException ex) {
+        log.error("OpenAI 协议上游异常: provider={}, status={}, code={}, message={}",
+            ex.getProvider(), ex.getStatus(), ex.getCode(), ex.getMessage(), ex);
+        int status = ex.getStatus() >= 400 && ex.getStatus() <= 599 ? ex.getStatus() : HttpStatus.BAD_GATEWAY.value();
+        String code = Strings.defaultIfBlank(ex.getCode(), "upstream_error");
+        OpenAiErrorResponseVo body = OpenAiErrorResponseVo.of(
+            ex.getMessage(), OpenAiErrorAssembler.resolveType(status), null, code
+        );
+        return ResponseEntity.status(status).body(body);
     }
 
     /**

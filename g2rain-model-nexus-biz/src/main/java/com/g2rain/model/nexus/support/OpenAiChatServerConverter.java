@@ -1,5 +1,7 @@
 package com.g2rain.model.nexus.support;
 
+
+import lombok.extern.slf4j.Slf4j;
 import com.g2rain.common.json.JsonCodec;
 import com.g2rain.common.json.JsonCodecFactory;
 import com.g2rain.common.utils.Collections;
@@ -39,6 +41,7 @@ import java.util.UUID;
  * @author alpha
  * @since 2026/8/1
  */
+@Slf4j
 public final class OpenAiChatServerConverter {
 
     /**
@@ -268,6 +271,7 @@ public final class OpenAiChatServerConverter {
             // 序列化结果异常为空：兜底
             return SupportConstants.EMPTY_OBJ_SCHEMA;
         } catch (RuntimeException ex) {
+            log.error("failed to serialize schema", ex);
             // 序列化失败：兜底空 schema，保证 ToolDefinition 仍可构建
             return SupportConstants.EMPTY_OBJ_SCHEMA;
         }

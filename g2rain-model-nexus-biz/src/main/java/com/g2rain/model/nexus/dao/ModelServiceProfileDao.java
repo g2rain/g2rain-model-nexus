@@ -146,4 +146,25 @@ public interface ModelServiceProfileDao {
      */
     @IgnoreIsolation
     int countByOrganIdAndCatalogId(@Param("organId") Long organId, @Param("catalogId") Long catalogId);
+
+    /**
+     * 同机构同类型的默认配置数。
+     *
+     * @param organId   机构标识
+     * @param modelType 模型类型
+     * @return 数量
+     */
+    @IgnoreIsolation
+    int countDefault(@Param("organId") Long organId, @Param("modelType") String modelType);
+
+    /**
+     * 清除同机构同类型的默认标识。
+     *
+     * @param organId   机构标识
+     * @param modelType 模型类型
+     * @return 影响行数
+     */
+    @IgnoreIsolation
+    @SuppressWarnings("UnusedReturnValue")
+    int clearDefault(@Param("organId") Long organId, @Param("modelType") String modelType);
 }

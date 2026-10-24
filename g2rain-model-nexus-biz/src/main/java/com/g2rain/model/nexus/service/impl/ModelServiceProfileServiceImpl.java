@@ -11,7 +11,6 @@ import com.g2rain.common.validation.Validations;
 import com.g2rain.model.nexus.converter.ModelServiceProfileConverter;
 import com.g2rain.model.nexus.dao.ModelServiceCatalogDao;
 import com.g2rain.model.nexus.dao.ModelServiceProfileDao;
-import com.g2rain.model.nexus.dao.po.ModelServiceCatalogPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceDetailPo;
 import com.g2rain.model.nexus.dao.po.ModelServiceProfilePo;
 import com.g2rain.model.nexus.dto.ModelServiceCatalogDto;
@@ -20,6 +19,7 @@ import com.g2rain.model.nexus.dto.ModelServiceProfileSelectDto;
 import com.g2rain.model.nexus.dto.UpdateStatusDto;
 import com.g2rain.model.nexus.enums.ModelStatus;
 import com.g2rain.model.nexus.enums.ModelType;
+import com.g2rain.model.nexus.enums.NexusErrorCode;
 import com.g2rain.model.nexus.enums.ResourceType;
 import com.g2rain.model.nexus.protocol.ModelEndpoint;
 import com.g2rain.model.nexus.service.ModelServiceCatalogService;
@@ -86,6 +86,7 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
         selectDto.setModelType(ModelType.LLM.name());
         selectDto.setStatus(ModelStatus.ACTIVE.name());
         selectDto.setCatalogStatus(ModelStatus.ACTIVE.name());
+        selectDto.setSelectable(Boolean.TRUE);
         return modelServiceProfileDao.selectOptionsList(selectDto)
             .stream()
             .map(ModelServiceProfileConverter.INSTANCE::po2option)
@@ -113,11 +114,13 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
         Long id = dto.getId();
         boolean isUpdate = Objects.nonNull(id) && id != 0;
         String catalogResourceType;
-        ModelServiceDetailPo existing = null;
+        String modelType = dto.getModelType();
+        ModelServiceDetailPo existing;
         if (isUpdate) {
             existing = modelServiceProfileDao.selectById(id);
             Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
             dto.setCatalogId(existing.getCatalogId());
+            modelType = existing.getModelType();
             var catalog = modelServiceCatalogDao.selectById(existing.getCatalogId());
             Asserts.isTrue(Objects.nonNull(catalog), SystemErrorCode.DATA_NOT_EXISTS, existing.getCatalogId());
             catalogResourceType = catalog.getResourceType();
@@ -133,14 +136,24 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
                     && ResourceType.MARKET.name().equals(catalog.getResourceType()),
                 SystemErrorCode.DATA_NOT_EXISTS, dto.getCatalogId());
             catalogResourceType = ResourceType.MARKET.name();
+            modelType = catalog.getModelType();
         }
 
         ModelServiceProfilePo entity = ModelServiceProfileConverter.INSTANCE.dto2po(dto);
+        entity.setDisplayName(Strings.blankToNull(Strings.trim(dto.getDisplayName())));
+        // 仅大模型可在对话中选择，向量 / 重排序固定为否
+        if (!ModelType.LLM.name().equals(modelType)) {
+            entity.setSelectable(Boolean.FALSE);
+        }
         if (!isUpdate) {
             Asserts.isTrue(Objects.nonNull(dto.getOrganId()), SystemErrorCode.PARAM_REQUIRED, "organId");
             assertMarketCatalogUnique(dto.getOrganId(), dto.getCatalogId(), catalogResourceType);
             entity.setId(idGenerator.generateId());
             entity.setStatus(ModelStatus.ACTIVE.name());
+            entity.setSelectable(Objects.requireNonNullElse(entity.getSelectable(), Boolean.TRUE));
+            entity.setModelType(modelType);
+            // 同机构同类型的第一条配置自动成为默认
+            entity.setDefaultFlag(modelServiceProfileDao.countDefault(dto.getOrganId(), modelType) == 0);
             LocalDateTime now = Moments.now();
             entity.setUpdateTime(now);
             entity.setCreateTime(now);
@@ -163,6 +176,7 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
     public int delete(Long id) {
         ModelServiceDetailPo existing = modelServiceProfileDao.selectById(id);
         Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
+        Asserts.isTrue(!Boolean.TRUE.equals(existing.getDefaultFlag()), NexusErrorCode.DEFAULT_PROFILE_LOCKED, id);
 
         int deleted = modelServiceProfileDao.delete(id);
         if (ResourceType.CUSTOM.name().equals(existing.getResourceType())
@@ -177,10 +191,33 @@ public class ModelServiceProfileServiceImpl implements ModelServiceProfileServic
         ModelStatus.validate(dto.getStatus());
         ModelServiceDetailPo existing = modelServiceProfileDao.selectById(id);
         Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
+        Asserts.isTrue(ModelStatus.ACTIVE.name().equals(dto.getStatus())
+            || !Boolean.TRUE.equals(existing.getDefaultFlag()), NexusErrorCode.DEFAULT_PROFILE_LOCKED, id);
 
         ModelServiceProfilePo entity = new ModelServiceProfilePo();
         entity.setId(id);
         entity.setStatus(dto.getStatus());
+        entity.setUpdateTime(Moments.now());
+        int success = modelServiceProfileDao.update(entity);
+        Asserts.greaterThan(success, 0, SystemErrorCode.UPDATE_DATA_ERROR, id);
+        return success;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int updateDefault(Long id) {
+        ModelServiceDetailPo existing = modelServiceProfileDao.selectById(id);
+        Asserts.isTrue(Objects.nonNull(existing), SystemErrorCode.DATA_NOT_EXISTS, id);
+        Asserts.isTrue(ModelStatus.ACTIVE.name().equals(existing.getStatus()), NexusErrorCode.MODEL_INACTIVE, id);
+        if (Boolean.TRUE.equals(existing.getDefaultFlag())) {
+            return 0;
+        }
+
+        // 先清同类型旧默认，再设当前；唯一索引兜底并发
+        modelServiceProfileDao.clearDefault(existing.getOrganId(), existing.getModelType());
+        ModelServiceProfilePo entity = new ModelServiceProfilePo();
+        entity.setId(id);
+        entity.setDefaultFlag(Boolean.TRUE);
         entity.setUpdateTime(Moments.now());
         int success = modelServiceProfileDao.update(entity);
         Asserts.greaterThan(success, 0, SystemErrorCode.UPDATE_DATA_ERROR, id);
