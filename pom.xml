@@ -21,10 +21,19 @@
         AI model gateway for unified LLM, embedding, and model service management.
     </description>
 
+    <url>https://github.com/g2rain/g2rain-model-nexus</url>
+
+    <scm>
+        <url>https://github.com/g2rain/g2rain-model-nexus</url>
+        <connection>scm:git:https://github.com/g2rain/g2rain-model-nexus.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/g2rain/g2rain-model-nexus.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
+
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
-            <url>http://www.apache.org/licenses/LICENSE-2.0.html</url>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.html</url>
             <distribution>repo</distribution>
         </license>
     </licenses>
