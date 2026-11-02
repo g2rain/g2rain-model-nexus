@@ -38,15 +38,13 @@ public class ChatCompletionRequest {
     /**
      * 对话消息列表；至少一条。
      */
-    @Valid
     @NotEmpty
     @Schema(description = "对话消息列表")
-    private List<ChatMessage> messages;
+    private List<@Valid ChatMessage> messages;
 
     /**
      * 可供模型选择的 tools；为空则纯文本对话。
      */
-    @Valid
     @Schema(description = "可供模型选择的 tools；为空则纯文本对话")
-    private List<ChatTool> tools;
+    private List<@Valid ChatTool> tools;
 }

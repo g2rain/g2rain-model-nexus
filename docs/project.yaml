@@ -14,5 +14,5 @@ modules:
   - {name: g2rain-model-nexus-startup, path: g2rain-model-nexus-startup, role: Spring Boot、异常映射和运行组装, mayDependOn: [g2rain-model-nexus-biz]}
 runtime: {mainClass: com.g2rain.model.nexus.Application, defaultPort: 8080, defaultProfile: nacos, minimumVersions: {java: "25", mysql: "8.0.13"}, dependencies: [MySQL, Redis, Nacos, 模型供应商服务]}
 commands: {verify: mvn clean verify, run: "mvn -pl g2rain-model-nexus-startup -am spring-boot:run", codegen: mvn g2rain-crafter:bootstrap, image: "./build.sh <tag>"}
-validation: {lastVerifiedAt: null, command: mvn clean verify, result: not-run, note: 文档初始化未运行构建。}
+validation: {lastVerifiedAt: 2026-11-01, command: mvn clean verify, result: failed, note: 已运行；Biz 编译阶段因当前 g2rain-common 1.0.9 缺少 JSON.str2map、Strings.defaultIfBlank 与 Strings.blankToNull 而失败。}
 documentation: {entry: docs/index.md, architecture: docs/architecture/overview.md, decisions: docs/decisions}
