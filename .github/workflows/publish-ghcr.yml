@@ -14,6 +14,13 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  publish-maven:
+    needs: publish
+    uses: ./.github/workflows/publish-maven.yml
+    permissions:
+      contents: read
+      packages: write
+
   publish:
     name: Build, test, and publish
     runs-on: ubuntu-latest
@@ -76,12 +83,24 @@ jobs:
         shell: bash
         run: printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
 
+      - name: Build and test all modules
+        run: mvn --batch-mode --no-transfer-progress clean install
+
       - name: Build, test, and push both image tags with Jib
+        working-directory: g2rain-model-nexus-startup
         env:
-          APP_IMAGE: ghcr.io/g2rain/g2rain-model-nexus
+          IMAGE_NAME: ghcr.io/g2rain/g2rain-model-nexus
+          IMAGE_TAG: ${{ steps.release.outputs.version }}
           EXTRA_TAGS: sha-${{ steps.release.outputs.commit }}
         shell: bash
-        run: ./build.sh "${{ steps.release.outputs.version }}" push
+        run: |
+          args=()
+          if [[ -n "$EXTRA_TAGS" ]]; then
+            args+=("-Djib.to.tags=$EXTRA_TAGS")
+          fi
+          mvn --batch-mode --no-transfer-progress -DskipTests=true compile jib:build \
+            "-Djib.to.image=$IMAGE_NAME:$IMAGE_TAG" \
+            "${args[@]}"
 
       - name: Report completed publication
         if: success()
