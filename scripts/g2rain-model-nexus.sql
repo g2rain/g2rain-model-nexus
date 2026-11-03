@@ -82,13 +82,15 @@ CREATE TABLE `model_usage_record` (
     INDEX `idx_organ_create_time` (`organ_id`, `create_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT=                             '模型用量记录';
 
--- 本地/开发示例：先写 catalog，再写租户 organ_id=2 的 profile
+-- 本地/开发示例：先写 catalog，再写租户 organ_id=3 的 profile
 INSERT INTO `model_service_catalog` (`id`, `model_name`, `model_type`, `resource_type`, `provider`, `protocol`, `base_url`, `api_key`, `status`, `description`)
-VALUES (1, 'Qwen3.6-27B-bw', 'LLM', 'MARKET', '千问大语言模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问广场大语言模型'),
-       (2, '/models/Qwen3-Embedding-8B', 'VECTOR', 'MARKET', '千问向量模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问广场向量模型'),
-       (3, 'Qwen3.8-27B', 'RERANK', 'MARKET', '千问向量模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问广场重排序模型');
+VALUES (1, 'DeepSeek-V4-Flash-BW', 'LLM',    'MARKET', 'DeepSeek大语言模型', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问大模型DeepSeek-V4-Flash'),
+       (2, 'Qwen3-8B-BW',          'LLM',    'MARKET', '千问大模型Qwen3-8B', 'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问大模型Qwen3-8B'),
+       (3, 'Qwen3-Embedding-8B',   'VECTOR', 'CUSTOM', '千问向量模型',       'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问自建向量模型'),
+       (5, 'bge-reranker-v2-m3',   'RERANK', 'CUSTOM', '千问重排序模型',      'OPENAI', 'https://g2rain.com/api/model/v1', 'sk-xxx', 'ACTIVE', '千问重排序模型');
 
 INSERT INTO `model_service_profile` (`id`, `organ_id`, `catalog_id`, `model_type`, `display_name`, `selectable`, `default_flag`, `temperature`, `top_p`, `max_tokens`, `timeout_ms`, `status`, `description`)
-VALUES (4, 2, 1, 'LLM', '千问', 1, 1, 0.00, 1.00, 4096, 120000, 'ACTIVE', '千问自建大语言模型'),
-       (5, 2, 2, 'VECTOR', '千问向量', 0, 1, NULL, NULL, NULL, 120000, 'ACTIVE', '千问自建向量模型'),
-       (6, 2, 3, 'RERANK', '千问重排序', 0, 1, NULL, NULL, NULL, 120000, 'ACTIVE', '千问重排序模型');
+VALUES (6, 3, 1, 'LLM',    'DeepSeek-V4-Flash',  1, 1, 0.00, 1.00, 8192, 120000, 'ACTIVE', '千问大模型DeepSeek-V4-Flash'),
+       (7, 3, 2, 'LLM',    'Qwen3-8B',           0, 0, 0.00, 1.00, 4096, 120000, 'ACTIVE', '千问大模型Qwen3-8B'),
+       (8, 3, 3, 'VECTOR', 'Qwen3-Embedding-8B', 0, 1, NULL, NULL, NULL, 120000, 'ACTIVE', '千问自建向量模型'),
+       (9, 3, 5, 'RERANK', 'bge-reranker-v2-m3', 0, 1, NULL, NULL, NULL, 120000, 'ACTIVE', '千问重排序模型');
