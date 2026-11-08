@@ -112,7 +112,7 @@ public final class ModelProtocolSupport {
      * @return RestClient
      */
     public static RestClient createBearerRestClient(String baseUrl, String apiKey, Duration timeout) {
-        Duration resolved = Objects.nonNull(timeout) ? timeout : Duration.ofSeconds(60);
+        Duration resolved = Objects.requireNonNullElse(timeout, Duration.ofSeconds(60));
         HttpClient httpClient = HttpClient.newBuilder().connectTimeout(resolved).build();
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
         requestFactory.setReadTimeout(resolved);
