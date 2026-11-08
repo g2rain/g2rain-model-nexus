@@ -19,6 +19,7 @@ import org.springframework.ai.openai.http.okhttp.OpenAiHttpClientBuilderCustomiz
 import org.springframework.ai.openai.setup.OpenAiSetup;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
@@ -71,6 +72,10 @@ public class OpenAiModelClient implements ModelClient {
      */
     @Override
     public ChatModel createChatModel(ModelEndpoint endpoint) {
+        Duration timeout = ModelProtocolSupport.resolveTimeout(
+            endpoint.options().timeoutMs()
+        );
+
         // ---------- 1. 用接入配置组装 OpenAiChatOptions ----------
         OpenAiChatOptions options = OpenAiChatOptions.builder()
             // 服务根地址（已去尾斜杠）；兼容自建/DeepSeek 等网关
@@ -88,7 +93,7 @@ public class OpenAiModelClient implements ModelClient {
             // 单次补全最大输出 token
             .maxTokens(endpoint.options().maxTokens())
             // HTTP 超时；非法值由 Support 兜底 60s
-            .timeout(ModelProtocolSupport.resolveTimeout(endpoint.options().timeoutMs()))
+            .timeout(timeout)
             .build();
 
         // ---------- 2. 按 options 创建官方 OpenAI Java 同步客户端 ----------
@@ -113,7 +118,7 @@ public class OpenAiModelClient implements ModelClient {
             // 默认模型名（与 options.model 一致即可）
             endpoint.modelName(),
             // 超时
-            options.getTimeout(),
+            timeout,
             // 失败重试次数
             options.getMaxRetries(),
             // 代理
@@ -147,6 +152,10 @@ public class OpenAiModelClient implements ModelClient {
      */
     @Override
     public EmbeddingModel createEmbeddingModel(ModelEndpoint endpoint) {
+        Duration timeout = ModelProtocolSupport.resolveTimeout(
+            endpoint.options().timeoutMs()
+        );
+
         // ---------- 1. Embedding 专用 options（无对话采样参数） ----------
         OpenAiEmbeddingOptions options = OpenAiEmbeddingOptions.builder()
             // 服务根地址
@@ -156,7 +165,7 @@ public class OpenAiModelClient implements ModelClient {
             // Embedding 模型名（如 text-embedding-3-small）
             .model(endpoint.modelName())
             // HTTP 超时
-            .timeout(ModelProtocolSupport.resolveTimeout(endpoint.options().timeoutMs()))
+            .timeout(timeout)
             .build();
 
         // ---------- 2. 同样走 OpenAiSetup 创建同步客户端 ----------
@@ -170,7 +179,7 @@ public class OpenAiModelClient implements ModelClient {
             options.isMicrosoftFoundry(),
             options.isGitHubModels(),
             endpoint.modelName(),
-            options.getTimeout(),
+            timeout,
             options.getMaxRetries(),
             options.getProxy(),
             options.getCustomHeaders(),
